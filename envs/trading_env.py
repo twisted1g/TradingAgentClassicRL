@@ -58,8 +58,9 @@ class MyTradingEnv(TradingEnv):
         self._add_technical_indicators()
         self._discretize_features()
 
-        self.df.fillna(method="bfill", inplace=True)
-        self.df.fillna(method="ffill", inplace=True)
+        self.df.bfill(inplace=True)
+        self.df.ffill(inplace=True)
+        self.df.fillna(0, inplace=True)
 
     def _add_technical_indicators(self):  # добавить индикаторы
         df = self.df
@@ -90,7 +91,9 @@ class MyTradingEnv(TradingEnv):
             df["rsi"],
             bins=[-np.inf, 30, 70, np.inf],
             labels=[0, 1, 2],
-        ).astype(int)
+        )
+
+        df["rsi_discrete"] = df["rsi_discrete"].fillna(1).astype(int)
 
     def _get_observation(self) -> np.ndarray:  # добавить индикаторы
         if self._idx >= len(self.df):
@@ -172,7 +175,7 @@ class MyTradingEnv(TradingEnv):
         self._idx += 1
 
         terminated = self._idx >= len(self.df) - 1
-        truncated = False
+        truncated = False  # потом
 
         reward = self._calculate_reward(
             action=action, perv_portfolio_value=perv_portfolio_value
@@ -185,8 +188,20 @@ class MyTradingEnv(TradingEnv):
             self._portfolio_value = self.initial_balance
 
             if self.current_holding_time > 0:
-                
-        
+                self.current_holding_time = 0
+                self.max_drawdown = 0.0
+
+        observation = self._get_observation()
+
+        info = {
+            "portfolio_value": self._portfolio_value,
+            "position": self._position,
+            "holding_time": self.current_holding_time,
+            "current_price": current_price,
+            "n_trades": len(self.trade_history),
+        }
+
+        return observation, reward, terminated, truncated, info
 
     def reset(self, seed=None, options=None) -> Tuple[np.ndarray, Dict]:
         super().reset(seed=seed, options=options)
@@ -204,13 +219,32 @@ class MyTradingEnv(TradingEnv):
 
         return observation, info
 
-    def render(self):
-        pass
+    def render(self, mode="human"):
+        if mode == "human":
+            print(
+                f"Step: {self._idx} / {len(self.df)-1},"
+                f"Portfolio: ${self._portfolio_value:.2f},"
+                f"Position: {'Long' if self._position == 1 else 'Flat'},"
+                f"Hold Time: {self.current_holding_time}, "
+                f"Trades: {len(self.trade_history)}"
+            )
 
-    def get_metrics(self):
-        return super().get_metrics()
+    def get_metrics(self) -> Dict[str, float]:
+        if len(self.trade_history) == 0:
+            return {
+                "total_trades": 0,
+                "win_rate": 0.0,
+                "avg_pnl": 0.0,
+                "avg_holding_time": 0.0,
+            }
 
+        trades = pd.DataFrame(self.trade_history)
 
-df = pd.read_csv("./data/data_1h.csv")
-trading_env = MyTradingEnv(df=df)
-print(trading_env.df)
+        return {
+            "total_trades": len(trades),
+            "win_rate": (trades["pnl"] > 0).mean() * 100,
+            "avg_pnl": trades["pnl"].mean(),
+            "avg_holding_time": trades["holding_time"].mean(),
+            "max_drawdown": trades["max_drawdown"].max(),
+            "total_pnl": trades["pnl"].sum(),
+        }

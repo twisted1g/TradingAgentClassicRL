@@ -7,5 +7,5 @@ download(
     timeframe="1m",
     dir="./data",
     since=datetime.datetime(year=2023, month=1, day=1),
-    until=datetime.datetime(year=2023, month=12, day=12),
+    until=datetime.datetime(year=2023, month=12, day=31),
 )
