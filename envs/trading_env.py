@@ -1,5 +1,4 @@
 from typing import Any, Dict, Tuple
-import gymnasium as gym
 from gymnasium import spaces
 from gym_trading_env.environments import TradingEnv
 import pandas as pd
@@ -16,6 +15,7 @@ class MyTradingEnv(TradingEnv):
         commission: float = 0.0001,
         slippage: float = 0.0005,
         max_holding_time: int = 60 * 24,
+        max_drawdown_threshold: float = 0.05,
         lambda_drawdown: float = 0.5,  # в будущем продобрать гиперпараметры
         lambda_hold: float = 0.1,  # в будущем продобрать гиперпараметры
         reward_scaling=1.0,
@@ -26,6 +26,7 @@ class MyTradingEnv(TradingEnv):
         self.commission = commission
         self.slippage = slippage
         self.max_holding_time = max_holding_time
+        self.max_drawdown_threshold = max_drawdown_threshold
         self.reward_scaling = reward_scaling
         self.lambda_drawdown = lambda_drawdown
         self.lambda_hold = lambda_hold
@@ -48,10 +49,12 @@ class MyTradingEnv(TradingEnv):
 
         self.current_holding_time = 0
         self.entry_price = 0.0
-        self.max_drawdown = 0
+        self.max_drawdown = 0.0
+        self.position_value = 0.0
+        self.cash_after_entry = 0.0
         self.trade_history = []
 
-        self.observation_space = spaces.MultiDiscrete([3, 2, 3])  # добавить индикаторы
+        self.observation_space = spaces.MultiDiscrete([3, 3, 3, 3, 2, 3])
         self.action_space = spaces.Discrete(3)
 
     def _prepare_data(self):
@@ -62,12 +65,25 @@ class MyTradingEnv(TradingEnv):
         self.df.ffill(inplace=True)
         self.df.fillna(0, inplace=True)
 
-    def _add_technical_indicators(self):  # добавить индикаторы
+    def _add_technical_indicators(self):
         df = self.df
 
         df["returns"] = df["close"].pct_change()
 
         df["rsi"] = self._calculate_rsi(df["close"])
+
+        exp1 = df["close"].ewm(span=12, adjust=False).mean()
+        exp2 = df["close"].ewm(span=26, adjust=False).mean()
+        df["macd"] = exp1 - exp2
+        df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
+        df["macd_diff"] = df["macd"] - df["macd_signal"]
+
+        df["ma_20"] = df["close"].rolling(window=20).mean()
+        df["ma_50"] = df["close"].rolling(window=50).mean()
+
+        df["price_to_ma20"] = (df["close"] - df["ma_20"]) / df["ma_20"]
+
+        df["price_trend"] = df["close"].diff(5)
 
         self.df = df
 
@@ -84,7 +100,7 @@ class MyTradingEnv(TradingEnv):
 
         return rsi
 
-    def _discretize_features(self):  # добавить индикаторы
+    def _discretize_features(self):
         df = self.df
 
         df["rsi_discrete"] = pd.cut(
@@ -92,16 +108,39 @@ class MyTradingEnv(TradingEnv):
             bins=[-np.inf, 30, 70, np.inf],
             labels=[0, 1, 2],
         )
-
         df["rsi_discrete"] = df["rsi_discrete"].fillna(1).astype(int)
 
-    def _get_observation(self) -> np.ndarray:  # добавить индикаторы
+        df["macd_discrete"] = pd.cut(
+            df["macd_diff"],
+            bins=[-np.inf, -0.5, 0.5, np.inf],
+            labels=[0, 1, 2],
+        )
+        df["macd_discrete"] = df["macd_discrete"].fillna(1).astype(int)
+
+        df["ma_trend_discrete"] = pd.cut(
+            df["price_to_ma20"] * 100,
+            bins=[-np.inf, -1, 1, np.inf],
+            labels=[0, 1, 2],
+        )
+        df["ma_trend_discrete"] = df["ma_trend_discrete"].fillna(1).astype(int)
+
+        df["price_trend_discrete"] = pd.cut(
+            df["price_trend"],
+            bins=[-np.inf, -0.01, 0.01, np.inf],
+            labels=[0, 1, 2],
+        )
+        df["price_trend_discrete"] = df["price_trend_discrete"].fillna(1).astype(int)
+
+    def _get_observation(self) -> np.ndarray:
         if self._idx >= len(self.df):
             return np.array([1, 0, 0])
 
         row = self.df.iloc[self._idx]
 
         rsi_level = int(row["rsi_discrete"])
+        macd_signal = int(row["macd_discrete"])
+        ma_trend = int(row["ma_trend_discrete"])
+        price_trend = int(row["price_trend_discrete"])
 
         position = self._position
 
@@ -112,35 +151,35 @@ class MyTradingEnv(TradingEnv):
         else:
             hold_level = 2
 
-        return np.array([rsi_level, position, hold_level])
+        return np.array(
+            [
+                rsi_level,
+                macd_signal,
+                ma_trend,
+                price_trend,
+                position,
+                hold_level,
+            ]
+        )
 
-    def _calculate_reward(self, action: int, perv_portfolio_value: float) -> float:
+    def _calculate_reward(self, perv_portfolio_value: float) -> float:
         current_price = self.df.iloc[self._idx]["close"]
 
         portfolio_change = self._portfolio_value - perv_portfolio_value
 
         if self._position == 1 and self.current_holding_time > 0:
-            unrealized_pnl = current_price - self.entry_price
+            current_value = self.position_value * (current_price / self.entry_price)
+            unrealized_pnl = current_value - self.position_value
 
-            if unrealized_pnl < 0:
-                self.max_drawdown = max(self.max_drawdown, abs(unrealized_pnl))
+            if self.entry_price != 0:
+                current_drawdown = abs(unrealized_pnl) / self.position_value
+                if current_drawdown > self.max_drawdown:
+                    self.max_drawdown = current_drawdown
 
         drawdown_penalty = self.lambda_drawdown * self.max_drawdown
         hold_penalty = self.lambda_hold * self.current_holding_time
 
         reward = float(portfolio_change - (drawdown_penalty + hold_penalty))
-
-        if action == 2 and self.current_holding_time > 0:
-            pnl = current_price - self.entry_price
-            self.trade_history.append(
-                {
-                    "entry_price": self.entry_price,
-                    "exit_price": current_price,
-                    "pnl": pnl,
-                    "holding_time": self.current_holding_time,
-                    "max_drawdown": self.max_drawdown,
-                }
-            )
 
         return reward * self.reward_scaling
 
@@ -153,7 +192,12 @@ class MyTradingEnv(TradingEnv):
         if self._position == 0:
             if action == 1:
                 actual_action = 1
-                self.entry_price = current_price * (1 + self.slippage)
+                entry_price_with_slippage = current_price * (1 + self.slippage)
+                self.position_value = min(self.initial_balance, self._portfolio_value)
+                entry_commission = self.position_value * self.commission
+                self._portfolio_value -= entry_commission
+                self.cash_after_entry = self._portfolio_value - self.position_value
+                self.entry_price = entry_price_with_slippage
                 self.current_holding_time = 0
                 self.max_drawdown = 0.0
             else:
@@ -162,34 +206,65 @@ class MyTradingEnv(TradingEnv):
         elif self._position == 1:
             self.current_holding_time += 1
 
+            current_value = self.position_value * (current_price / self.entry_price)
+            if self.position_value != 0:
+                current_unrealized_pnl = current_value - self.position_value
+                current_drawdown = abs(current_unrealized_pnl) / self.position_value
+            else:
+                current_drawdown = 0.0
+
             if action == 2:
                 actual_action = 0
 
             elif self.current_holding_time >= self.max_holding_time:
                 actual_action = 0
 
+            elif current_drawdown >= self.max_drawdown_threshold:
+                actual_action = 0
+
             else:
                 actual_action = 1
+
+            if actual_action == 0:
+                exit_price_with_slippage = current_price * (1 - self.slippage)
+                pnl = (exit_price_with_slippage - self.entry_price) * (
+                    self.position_value / self.entry_price
+                )
+                exit_commission = self.position_value * self.commission
+                self._portfolio_value = self.cash_after_entry + pnl - exit_commission
+
+                self.trade_history.append(
+                    {
+                        "entry_price": self.entry_price,
+                        "exit_price": exit_price_with_slippage,
+                        "pnl": pnl - exit_commission,
+                        "holding_time": self.current_holding_time,
+                        "max_drawdown": self.max_drawdown,
+                        "exit_reason": (
+                            "agent"
+                            if action == 2
+                            else (
+                                "time"
+                                if self.current_holding_time >= self.max_holding_time
+                                else "drawdown"
+                            )
+                        ),
+                    }
+                )
+
+        if self._position == 1:
+            current_position_value = self.position_value * (
+                current_price / self.entry_price
+            )
+            self._portfolio_value = self.cash_after_entry + current_position_value
 
         self._position = actual_action
         self._idx += 1
 
         terminated = self._idx >= len(self.df) - 1
-        truncated = False  # потом
+        truncated = False
 
-        reward = self._calculate_reward(
-            action=action, perv_portfolio_value=perv_portfolio_value
-        )
-
-        if self._position == 1:
-            position_value = self.initial_balance * (current_price / self.entry_price)
-            self._portfolio_value = position_value
-        else:
-            self._portfolio_value = self.initial_balance
-
-            if self.current_holding_time > 0:
-                self.current_holding_time = 0
-                self.max_drawdown = 0.0
+        reward = self._calculate_reward(perv_portfolio_value=perv_portfolio_value)
 
         observation = self._get_observation()
 
@@ -212,6 +287,8 @@ class MyTradingEnv(TradingEnv):
         self.entry_price = 0.0
         self.max_drawdown = 0.0
         self._portfolio_value = self.initial_balance
+        self.position_value = 0.0
+        self.cash_after_entry = 0.0
         self.trade_history = []
 
         observation = self._get_observation()
@@ -247,4 +324,6 @@ class MyTradingEnv(TradingEnv):
             "avg_holding_time": trades["holding_time"].mean(),
             "max_drawdown": trades["max_drawdown"].max(),
             "total_pnl": trades["pnl"].sum(),
+            "trades_closed_by_drawdown": (trades["exit_reason"] == "drawdown").sum(),
+            "trades_closed_by_time": (trades["exit_reason"] == "time").sum(),
         }
