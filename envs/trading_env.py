@@ -206,10 +206,13 @@ class MyTradingEnv(TradingEnv):
         elif self._position == 1:
             self.current_holding_time += 1
 
-            current_value = self.position_value * (current_price / self.entry_price)
+            # current_value = self.position_value * (current_price / self.entry_price)
             if self.position_value != 0:
-                current_unrealized_pnl = current_value - self.position_value
-                current_drawdown = abs(current_unrealized_pnl) / self.position_value
+                # current_unrealized_pnl = current_value - self.position_value
+                # current_drawdown = abs(current_unrealized_pnl) / self.position_value
+                current_drawdown = max(
+                    0, (self.entry_price - current_price) / self.entry_price
+                )
             else:
                 current_drawdown = 0.0
 
@@ -232,6 +235,10 @@ class MyTradingEnv(TradingEnv):
                 )
                 exit_commission = self.position_value * self.commission
                 self._portfolio_value = self.cash_after_entry + pnl - exit_commission
+
+                # print(
+                #     f"шаг={self._idx}, хронология={self.current_holding_time}, просадка={current_drawdown}"
+                # )
 
                 self.trade_history.append(
                     {

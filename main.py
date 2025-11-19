@@ -43,7 +43,7 @@ def main():
     data_path = "data/data_1m.csv"
     df = pd.read_csv(data_path, index_col=0, parse_dates=True, date_format="iso8601")
 
-    # df = df.iloc[:8000]
+    df = df.iloc[:100_000]
     print(f"Загружено {len(df)} строк данных.")
 
     # --- RandomAgent ---
@@ -65,12 +65,11 @@ def main():
     )
     random_final = portfolio_random[-1]
 
-    # --- BuyAndHoldAgent ---
     env_buyhold = MyTradingEnv(
         df=df,
         initial_balance=1000.0,
         window_size=10,
-        max_holding_time=10**18,
+        max_holding_time=10**8,
         max_drawdown_threshold=1,
     )
     buyhold_agent = BuyAndHoldAgent(initial_buy_step=10)
@@ -79,7 +78,6 @@ def main():
     )
     buyhold_final = portfolio_buyhold[-1]
 
-    # --- MovingAverageAgent ---
     env_ma = MyTradingEnv(
         df=df,
         initial_balance=1000.0,
@@ -96,7 +94,6 @@ def main():
     steps_ma, portfolio_ma = run_and_plot_agent(ma_agent, env_ma, "MovingAverageAgent")
     ma_final = portfolio_ma[-1]
 
-    # --- График ---
     plt.figure(figsize=(14, 8))
 
     plt.plot(
@@ -117,8 +114,6 @@ def main():
         label=f"MovingAverageAgent (Final: ${ma_final:.2f})",
         alpha=0.7,
     )
-
-    # Убрали график цены
 
     plt.title("Сравнение агентов по стоимости портфеля")
     plt.xlabel("Шаг")
