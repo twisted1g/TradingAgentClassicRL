@@ -71,6 +71,73 @@ class BaseAgent(ABC):
 
         return stats
 
+    def evaluate(
+        self,
+        env,
+        n_episodes: int = 1,
+        render: bool = False,
+        verbose: bool = True,
+        render_interval: int = 50,
+    ) -> Dict[str, Any]:
+        all_rewards = []
+        all_final_values = []
+
+        for episode in range(n_episodes):
+            self.reset()
+            obs, info = env.reset()
+            done = False
+            episode_reward = 0
+            step = 0
+
+            while not done:
+                action = self.act(observation=obs, info=info)
+                next_obs, reward, terminated, truncated, info = env.step(action=action)
+                done = terminated or truncated
+
+                self.update(
+                    observation=obs,
+                    action=action,
+                    reward=reward,
+                    next_observation=next_obs,
+                    done=done,
+                    info=info,
+                )
+                episode_reward += reward
+                obs = next_obs
+                step += 1
+
+                if render and step % render_interval == 0:
+                    env.render()
+
+            all_rewards.append(episode_reward)
+            all_final_values.append(info.get("portfolio_value", 0))
+
+            if verbose:
+                print(
+                    f"Episode {episode + 1} / {n_episodes}: "
+                    f"Reward={episode_reward:.2f}, "
+                    f"Final Value=${info.get('portfolio_value', 0):.2f}"
+                )
+
+        stats = self.get_status()
+        stats.update(
+            {
+                "n_episodes": n_episodes,
+                "mean_episode_reward": float(np.mean(all_rewards)),
+                "std_episode_reward": (
+                    float(np.std(all_rewards)) if len(all_rewards) > 1 else 0.0
+                ),
+                "mean_final_value": float(np.mean(all_final_values)),
+                "std_final_value": (
+                    float(np.std(all_final_values))
+                    if len(all_final_values) > 1
+                    else 0.0
+                ),
+            }
+        )
+
+        return stats
+
     def __str__(self) -> str:
         return f"{self.name} Position: {self.position}, Step: {self.current_step}"
 

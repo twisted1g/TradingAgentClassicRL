@@ -162,108 +162,99 @@ class MyTradingEnv(TradingEnv):
             ]
         )
 
-    def _calculate_reward(self, perv_portfolio_value: float) -> float:
-        current_price = self.df.iloc[self._idx]["close"]
+    def _calculate_reward(self, prev_portfolio_value: float) -> float:
+        portfolio_change = self._portfolio_value - prev_portfolio_value
 
-        portfolio_change = self._portfolio_value - perv_portfolio_value
+        drawdown_penalty = 0.0
+        hold_penalty = 0.0
 
         if self._position == 1 and self.current_holding_time > 0:
-            current_value = self.position_value * (current_price / self.entry_price)
-            unrealized_pnl = current_value - self.position_value
-
-            if self.entry_price != 0:
-                current_drawdown = abs(unrealized_pnl) / self.position_value
-                if current_drawdown > self.max_drawdown:
-                    self.max_drawdown = current_drawdown
-
-        drawdown_penalty = self.lambda_drawdown * self.max_drawdown
-        hold_penalty = self.lambda_hold * self.current_holding_time
+            drawdown_penalty = self.lambda_drawdown * self.max_drawdown
+            hold_penalty = self.lambda_hold * self.current_holding_time
 
         reward = float(portfolio_change - (drawdown_penalty + hold_penalty))
 
         return reward * self.reward_scaling
 
     def step(self, action: int) -> Tuple[np.array, float, bool, bool, Dict[str, Any]]:
-        perv_portfolio_value = self._portfolio_value
+        prev_portfolio_value = self._portfolio_value
         current_price = self.df.iloc[self._idx]["close"]
 
         actual_action = action
 
         if self._position == 0:
             if action == 1:
-                actual_action = 1
                 entry_price_with_slippage = current_price * (1 + self.slippage)
-                self.position_value = min(self.initial_balance, self._portfolio_value)
-                entry_commission = self.position_value * self.commission
-                self._portfolio_value -= entry_commission
-                self.cash_after_entry = self._portfolio_value - self.position_value
+                invest_amount = self._portfolio_value
+                entry_commission = invest_amount * self.commission
+
                 self.entry_price = entry_price_with_slippage
+                self.position_value = invest_amount
+                self.cash_after_entry = -entry_commission
+                self._portfolio_value -= entry_commission
+
                 self.current_holding_time = 0
                 self.max_drawdown = 0.0
+                actual_action = 1
             else:
                 actual_action = 0
 
         elif self._position == 1:
             self.current_holding_time += 1
 
-            # current_value = self.position_value * (current_price / self.entry_price)
-            if self.position_value != 0:
-                # current_unrealized_pnl = current_value - self.position_value
-                # current_drawdown = abs(current_unrealized_pnl) / self.position_value
-                current_drawdown = max(
-                    0, (self.entry_price - current_price) / self.entry_price
-                )
-            else:
-                current_drawdown = 0.0
+            current_position_value = self.position_value * (
+                current_price / self.entry_price
+            )
+            self._portfolio_value = self.cash_after_entry + current_position_value
+
+            unrealized_pnl = current_position_value - self.position_value
+            current_drawdown = max(0.0, -unrealized_pnl / self.position_value)
+            if current_drawdown > self.max_drawdown:
+                self.max_drawdown = current_drawdown
+
+            should_close = False
+            exit_reason = None
 
             if action == 2:
-                actual_action = 0
-
+                should_close = True
+                exit_reason = "agent"
             elif self.current_holding_time >= self.max_holding_time:
-                actual_action = 0
-
+                should_close = True
+                exit_reason = "time"
             elif current_drawdown >= self.max_drawdown_threshold:
-                actual_action = 0
+                should_close = True
+                exit_reason = "drawdown"
 
-            else:
-                actual_action = 1
-
-            if actual_action == 0:
+            if should_close:
                 exit_price_with_slippage = current_price * (1 - self.slippage)
-                pnl = (exit_price_with_slippage - self.entry_price) * (
-                    self.position_value / self.entry_price
-                )
-                exit_commission = self.position_value * self.commission
-                self._portfolio_value = self.cash_after_entry + pnl - exit_commission
+                units = self.position_value / self.entry_price
+                exit_value = units * exit_price_with_slippage
+                exit_commission = exit_value * self.commission
+                pnl = exit_value - self.position_value - exit_commission
 
-                # print(
-                #     f"шаг={self._idx}, хронология={self.current_holding_time}, просадка={current_drawdown}"
-                # )
+                self._portfolio_value = (
+                    self.cash_after_entry + exit_value - exit_commission
+                )
 
                 self.trade_history.append(
                     {
                         "entry_price": self.entry_price,
                         "exit_price": exit_price_with_slippage,
-                        "pnl": pnl - exit_commission,
+                        "pnl": pnl,
                         "holding_time": self.current_holding_time,
                         "max_drawdown": self.max_drawdown,
-                        "exit_reason": (
-                            "agent"
-                            if action == 2
-                            else (
-                                "time"
-                                if self.current_holding_time >= self.max_holding_time
-                                else "drawdown"
-                            )
-                        ),
+                        "exit_reason": exit_reason,
                     }
                 )
 
-        if self._position == 1:
-            current_position_value = self.position_value * (
-                current_price / self.entry_price
-            )
-            self._portfolio_value = self.cash_after_entry + current_position_value
+                self.entry_price = 0.0
+                self.position_value = 0.0
+                self.cash_after_entry = 0.0
+                self.current_holding_time = 0
+                self.max_drawdown = 0.0
+                actual_action = 0
+            else:
+                actual_action = 1
 
         self._position = actual_action
         self._idx += 1
@@ -271,7 +262,7 @@ class MyTradingEnv(TradingEnv):
         terminated = self._idx >= len(self.df) - 1
         truncated = False
 
-        reward = self._calculate_reward(perv_portfolio_value=perv_portfolio_value)
+        reward = self._calculate_reward(prev_portfolio_value=prev_portfolio_value)
 
         observation = self._get_observation()
 

@@ -5,10 +5,9 @@ from agents.random_agent import RandomAgent
 from agents.buyhold_agent import BuyAndHoldAgent
 from agents.moving_average_agent import MovingAverageAgent
 from envs.trading_env import MyTradingEnv
-from agents.utils import evaluate_agent
 
 
-def run_and_plot_agent(agent, env, agent_name):
+def run_and_plot_agent(agent, env, name):
     portfolio_history = []
     step_history = []
 
@@ -40,19 +39,24 @@ def run_and_plot_agent(agent, env, agent_name):
 
 
 def main():
-    data_path = "data/data_1m.csv"
+    data_path = "data/data_1h.csv"
     df = pd.read_csv(data_path, index_col=0, parse_dates=True, date_format="iso8601")
 
-    df = df.iloc[:100_000]
+    # df = df.iloc[:100_000]
     print(f"Загружено {len(df)} строк данных.")
 
-    # --- RandomAgent ---
+    initial_balance = 1000.0
+    window_size = 10
+    max_holding_time = 10**8
+    max_drawdown_threshold = 1
+
+    # === RandomAgent ===
     env_random = MyTradingEnv(
         df=df,
-        initial_balance=1000.0,
-        window_size=10,
-        max_holding_time=10**8,
-        max_drawdown_threshold=1,
+        initial_balance=initial_balance,
+        window_size=window_size,
+        max_holding_time=max_holding_time,
+        max_drawdown_threshold=max_drawdown_threshold,
     )
     random_agent = RandomAgent(
         seed=42,
@@ -65,12 +69,26 @@ def main():
     )
     random_final = portfolio_random[-1]
 
+    eval_random = random_agent.evaluate(
+        env=MyTradingEnv(
+            df=df,
+            initial_balance=initial_balance,
+            window_size=window_size,
+            max_holding_time=max_holding_time,
+            max_drawdown_threshold=max_drawdown_threshold,
+        ),
+        n_episodes=1,
+        verbose=True,
+    )
+    print("RandomAgent evaluate result:", eval_random)
+
+    # === BuyAndHoldAgent ===
     env_buyhold = MyTradingEnv(
         df=df,
-        initial_balance=1000.0,
-        window_size=10,
-        max_holding_time=10**8,
-        max_drawdown_threshold=1,
+        initial_balance=initial_balance,
+        window_size=window_size,
+        max_holding_time=max_holding_time,
+        max_drawdown_threshold=max_drawdown_threshold,
     )
     buyhold_agent = BuyAndHoldAgent(initial_buy_step=10)
     steps_buyhold, portfolio_buyhold = run_and_plot_agent(
@@ -78,12 +96,26 @@ def main():
     )
     buyhold_final = portfolio_buyhold[-1]
 
+    eval_buyhold = buyhold_agent.evaluate(
+        env=MyTradingEnv(
+            df=df,
+            initial_balance=initial_balance,
+            window_size=window_size,
+            max_holding_time=max_holding_time,
+            max_drawdown_threshold=max_drawdown_threshold,
+        ),
+        n_episodes=1,
+        verbose=True,
+    )
+    print("BuyAndHoldAgent evaluate result:", eval_buyhold)
+
+    # === MovingAverageAgent ===
     env_ma = MyTradingEnv(
         df=df,
-        initial_balance=1000.0,
-        window_size=10,
-        max_holding_time=10**8,
-        max_drawdown_threshold=1,
+        initial_balance=initial_balance,
+        window_size=window_size,
+        max_holding_time=max_holding_time,
+        max_drawdown_threshold=max_drawdown_threshold,
     )
     ma_agent = MovingAverageAgent(
         name="MovingAverageAgent",
@@ -94,8 +126,20 @@ def main():
     steps_ma, portfolio_ma = run_and_plot_agent(ma_agent, env_ma, "MovingAverageAgent")
     ma_final = portfolio_ma[-1]
 
-    plt.figure(figsize=(14, 8))
+    eval_ma = ma_agent.evaluate(
+        env=MyTradingEnv(
+            df=df,
+            initial_balance=initial_balance,
+            window_size=window_size,
+            max_holding_time=max_holding_time,
+            max_drawdown_threshold=max_drawdown_threshold,
+        ),
+        n_episodes=1,
+        verbose=True,
+    )
+    print("MovingAverageAgent evaluate result:", eval_ma)
 
+    plt.figure(figsize=(14, 8))
     plt.plot(
         steps_random,
         portfolio_random,
@@ -120,7 +164,6 @@ def main():
     plt.ylabel("Стоимость портфеля")
     plt.legend()
     plt.grid(True)
-
     plt.tight_layout()
     plt.show()
 
