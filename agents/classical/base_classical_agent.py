@@ -9,7 +9,7 @@ from envs.trading_env import MyTradingEnv
 class BaseClassicalAgent(ABC):
     def __init__(
         self,
-        n_actions: int,
+        n_actions: int = 3,
         learning_rate: float = 0.1,
         discount_factor: float = 0.99,
         epsilon_start: float = 1,

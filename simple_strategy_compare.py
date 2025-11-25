@@ -1,9 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from agents.random_agent import RandomAgent
-from agents.buyhold_agent import BuyAndHoldAgent
-from agents.moving_average_agent import MovingAverageAgent
+from agents.default.random_agent import RandomAgent
+from agents.default.buyhold_agent import BuyAndHoldAgent
+from agents.default.moving_average_agent import MovingAverageAgent
 from envs.trading_env import MyTradingEnv
 
 

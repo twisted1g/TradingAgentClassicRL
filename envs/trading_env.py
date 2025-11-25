@@ -15,6 +15,7 @@ class MyTradingEnv(TradingEnv):
         commission: float = 0.0001,
         slippage: float = 0.0005,
         max_holding_time: int = 60 * 24,
+        holding_threshold: int = 24,
         max_drawdown_threshold: float = 0.05,
         lambda_drawdown: float = 0.5,  # в будущем продобрать гиперпараметры
         lambda_hold: float = 0.1,  # в будущем продобрать гиперпараметры
@@ -27,7 +28,9 @@ class MyTradingEnv(TradingEnv):
         self.slippage = slippage
         self.max_holding_time = max_holding_time
         self.max_drawdown_threshold = max_drawdown_threshold
+        self.holding_threshold = holding_threshold
         self.reward_scaling = reward_scaling
+
         self.lambda_drawdown = lambda_drawdown
         self.lambda_hold = lambda_hold
         self.reward_scaling = reward_scaling
@@ -170,7 +173,9 @@ class MyTradingEnv(TradingEnv):
 
         if self._position == 1 and self.current_holding_time > 0:
             drawdown_penalty = self.lambda_drawdown * self.max_drawdown
-            hold_penalty = self.lambda_hold * self.current_holding_time
+            hold_penalty = self.lambda_hold * max(
+                self.current_holding_time - self.max_drawdown, 0
+            )
 
         reward = float(portfolio_change - (drawdown_penalty + hold_penalty))
 

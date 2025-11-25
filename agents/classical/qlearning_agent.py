@@ -4,8 +4,8 @@ from .base_classical_agent import BaseClassicalAgent
 
 
 class QLearningAgent(BaseClassicalAgent):
-    def __init__(self, n_actions: int, **kwargs):
-        super().__init__(n_actions=n_actions, name="Q-Learning", **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(name="Q-Learning", **kwargs)
 
     def update(
         self,
