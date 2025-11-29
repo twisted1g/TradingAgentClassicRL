@@ -1,0 +1,62 @@
+{
+  "config": {
+    "agent_name": "QLearning_v1",
+    "agent_type": "QLearning",
+    "n_episodes": 2000,
+    "max_steps": 50,
+    "learning_rate": 0.1,
+    "discount_factor": 0.99,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.995,
+    "lambda_param": null,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 100,
+    "save_frequency": 500
+  },
+  "training_time": 57.78208255767822,
+  "total_episodes": 2000,
+  "final_metrics": {
+    "episode": 2000,
+    "reward": -6.253506192045998,
+    "steps": 50,
+    "epsilon": 0.01,
+    "portfolio_value": 995.3489046171323,
+    "n_trades": 10,
+    "win_rate": 30.0,
+    "avg_pnl": -0.36506559110180453,
+    "max_drawdown": 0.0024816680101750043,
+    "timestamp": 1764444484.0802963
+  },
+  "checkpoints": [
+    {
+      "episode": 500,
+      "path": "checkpoints/qlearning_baseline/checkpoint_ep500.pkl",
+      "timestamp": 1764444437.583173
+    },
+    {
+      "episode": 1000,
+      "path": "checkpoints/qlearning_baseline/checkpoint_ep1000.pkl",
+      "timestamp": 1764444452.3100698
+    },
+    {
+      "episode": 1500,
+      "path": "checkpoints/qlearning_baseline/checkpoint_ep1500.pkl",
+      "timestamp": 1764444466.3301804
+    },
+    {
+      "episode": 2000,
+      "path": "checkpoints/qlearning_baseline/checkpoint_ep2000.pkl",
+      "timestamp": 1764444481.810097
+    },
+    {
+      "episode": 2000,
+      "path": "checkpoints/qlearning_baseline/final_agent.pkl",
+      "timestamp": 1764444481.8437283
+    }
+  ],
+  "timestamp": "2025-11-29T22:28:01.843984"
+}

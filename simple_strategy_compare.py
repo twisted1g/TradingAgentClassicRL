@@ -39,7 +39,7 @@ def run_and_plot_agent(agent, env, name):
 
 
 def main():
-    data_path = "data/data_1h.csv"
+    data_path = "data/data_1h_2024.csv"
     df = pd.read_csv(data_path, index_col=0, parse_dates=True, date_format="iso8601")
 
     # df = df.iloc[:100_000]

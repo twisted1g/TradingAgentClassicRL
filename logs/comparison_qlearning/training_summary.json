@@ -1,0 +1,42 @@
+{
+  "config": {
+    "agent_name": "QLearning",
+    "agent_type": "QLearning",
+    "n_episodes": 200,
+    "max_steps": 1000,
+    "learning_rate": 0.1,
+    "discount_factor": 0.99,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.995,
+    "lambda_param": null,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 100,
+    "save_frequency": 500
+  },
+  "training_time": 48.25012516975403,
+  "total_episodes": 200,
+  "final_metrics": {
+    "episode": 200,
+    "reward": -97.36461025705623,
+    "steps": 1000,
+    "epsilon": 0.3669578217261671,
+    "portfolio_value": 932.7355916195298,
+    "n_trades": 138,
+    "win_rate": 39.85507246376812,
+    "avg_pnl": -0.3892999031201885,
+    "max_drawdown": 0.02332279120362631,
+    "timestamp": 1764445853.96931
+  },
+  "checkpoints": [
+    {
+      "episode": 200,
+      "path": "checkpoints/comparison_qlearning/final_agent.pkl",
+      "timestamp": 1764445855.948983
+    }
+  ],
+  "timestamp": "2025-11-29T22:50:55.949154"
+}

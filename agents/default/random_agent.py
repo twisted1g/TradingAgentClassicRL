@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional
 import numpy as np
-from base_agent import BaseAgent
+from .base_agent import BaseAgent
 
 RANDOM_SEED = 42
 
