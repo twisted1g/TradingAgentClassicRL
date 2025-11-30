@@ -1,0 +1,42 @@
+{
+  "config": {
+    "agent_name": "MonteCarlo1",
+    "agent_type": "MonteCarlo",
+    "n_episodes": 100,
+    "max_steps": 1000,
+    "learning_rate": 0.1,
+    "discount_factor": 0.99,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.995,
+    "lambda_param": null,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 100,
+    "save_frequency": 500
+  },
+  "training_time": 76.99366593360901,
+  "total_episodes": 100,
+  "final_metrics": {
+    "episode": 100,
+    "reward": -169.1493358359783,
+    "steps": 1000,
+    "epsilon": 0.6057704364907278,
+    "portfolio_value": 899.724532227924,
+    "n_trades": 169,
+    "win_rate": 40.828402366863905,
+    "avg_pnl": -0.49421901611373353,
+    "max_drawdown": 0.021598536309422232,
+    "timestamp": 1764517849.9529274
+  },
+  "checkpoints": [
+    {
+      "episode": 100,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/final_agent.pkl",
+      "timestamp": 1764517851.0645545
+    }
+  ],
+  "timestamp": "2025-11-30T18:50:51.064666"
+}

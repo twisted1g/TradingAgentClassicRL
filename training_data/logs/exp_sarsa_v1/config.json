@@ -1,6 +1,6 @@
 {
-  "agent_name": "QLearning_v1",
-  "agent_type": "QLearning",
+  "agent_name": "Sarsa_v1",
+  "agent_type": "Sarsa",
   "n_episodes": 10000,
   "max_steps": 1000,
   "learning_rate": 0.1,
