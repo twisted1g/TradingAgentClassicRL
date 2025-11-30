@@ -10,12 +10,14 @@ from .training_logger import TrainingLogger
 
 class TrainingManager:
     def __init__(
-        self, base_log_dir: str = "logs", base_checkpoint_dir: str = "checkpoints"
+        self,
+        base_log_dir: str = "   training_data/logs",
+        base_checkpoint_dir: str = "training_data/checkpoints",
     ):
         self.base_log_dir = Path(base_log_dir)
         self.base_checkpoint_dir = Path(base_checkpoint_dir)
-        self.base_log_dir.mkdir(exist_ok=True)
-        self.base_checkpoint_dir.mkdir(exist_ok=True)
+        self.base_log_dir.mkdir(parents=True, exist_ok=True)
+        self.base_checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     def train_agent(
         self,
