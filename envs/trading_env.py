@@ -174,7 +174,7 @@ class MyTradingEnv(TradingEnv):
         if self._position == 1 and self.current_holding_time > 0:
             drawdown_penalty = self.lambda_drawdown * self.max_drawdown
             hold_penalty = self.lambda_hold * max(
-                self.current_holding_time - self.max_drawdown, 0
+                self.current_holding_time - self.holding_threshold, 0
             )
 
         reward = float(portfolio_change - (drawdown_penalty + hold_penalty))

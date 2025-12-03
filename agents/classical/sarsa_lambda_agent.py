@@ -97,7 +97,10 @@ class SarsaLambdaAgent(BaseClassicalAgent):
             next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
-            next_action = self.select_action(next_state, training=True)
+            if not done:
+                next_action = self.select_action(next_state, training=True)
+            else:
+                next_action = 0
 
             self.update(state, action, reward, next_state, done, next_action)
 

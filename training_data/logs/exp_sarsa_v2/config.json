@@ -1,0 +1,18 @@
+{
+  "agent_name": "SARSA_v2",
+  "agent_type": "SARSA",
+  "n_episodes": 10000,
+  "max_steps": 1000,
+  "learning_rate": 0.1,
+  "discount_factor": 0.99,
+  "epsilon_start": 1.0,
+  "epsilon_end": 0.01,
+  "epsilon_decay": 0.995,
+  "lambda_param": null,
+  "replace_traces": null,
+  "initial_balance": 1000.0,
+  "commission": 0.0001,
+  "slippage": 0.0005,
+  "eval_frequency": 500,
+  "save_frequency": 1000
+}

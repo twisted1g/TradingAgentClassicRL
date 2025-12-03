@@ -51,6 +51,7 @@ class TrainingManager:
         start_time = time.time()
 
         for episode in range(config.n_episodes):
+
             state, info = env.reset()
             done = False
             episode_reward = 0
@@ -59,14 +60,21 @@ class TrainingManager:
             action = agent.select_action(state, training=True)
 
             while not done and steps < config.max_steps:
+
                 next_state, reward, terminated, truncated, info = env.step(action)
+
                 done = terminated or truncated
 
-                next_action = agent.select_action(next_state, training=True)
+                if not done:
+                    next_action = agent.select_action(next_state, training=True)
+                else:
+                    next_action = 0
+
                 agent.update(state, action, reward, next_state, done, next_action)
 
                 state = next_state
                 action = next_action
+
                 episode_reward += reward
                 steps += 1
 
@@ -98,21 +106,25 @@ class TrainingManager:
                 logger.log_evaluation(episode + 1, eval_results)
 
                 if verbose:
-                    avg_reward = np.mean(agent.episode_rewards[-100:])
-                    print(f"Episode {episode + 1}/{config.n_episodes}")
+                    avg_reward = (
+                        np.mean(agent.episode_rewards[-100:])
+                        if len(agent.episode_rewards) >= 100
+                        else 0
+                    )
+                    print(f"Эпизод {episode + 1}/{config.n_episodes}")
                     print(
-                        f"  Train Reward: {episode_reward:.2f} | Avg100: {avg_reward:.2f}"
+                        f"  Награда: {episode_reward:.2f} | Средняя (100): {avg_reward:.2f}"
                     )
                     print(
-                        f"  Eval Reward: {eval_results['mean_reward']:.2f} ± {eval_results['std_reward']:.2f}"
+                        f"  Оценка: {eval_results['mean_reward']:.2f} ± {eval_results['std_reward']:.2f}"
                     )
                     print(
-                        f"  Epsilon: {agent.epsilon:.4f} | Q-table: {len(agent.q_table)} states"
+                        f"  Epsilon: {agent.epsilon:.4f} | Состояний: {len(agent.q_table)}"
                     )
                     print(
-                        f"  Trades: {env_metrics.get('total_trades', 0)} | Win Rate: {env_metrics.get('win_rate', 0):.1f}%"
+                        f"  Сделок: {env_metrics.get('total_trades', 0)} | Win Rate: {env_metrics.get('win_rate', 0):.1f}%"
                     )
-                    print(f"  Portfolio: ${env._portfolio_value:.2f}")
+                    print(f"  Портфель: ${env._portfolio_value:.2f}")
                     print()
 
             if (episode + 1) % config.save_frequency == 0:

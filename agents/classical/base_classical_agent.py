@@ -89,12 +89,16 @@ class BaseClassicalAgent(ABC):
             next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
-            next_action = self.select_action(next_state, training=True)
+            if not done:
+                next_action = self.select_action(next_state, training=True)
+            else:
+                next_action = 0
 
             self.update(state, action, reward, next_state, done, next_action)
 
             state = next_state
             action = next_action
+
             episode_reward += reward
             steps += 1
             self.total_steps += 1
@@ -140,7 +144,6 @@ class BaseClassicalAgent(ABC):
             self.train_episode(env, max_steps, verbose)
 
         print("=" * 70)
-        print(f"Обучение завершено!")
         print(f"Всего эпизодов: {self.episode_count}")
         print(f"Размер Q-таблицы: {len(self.q_table)} состояний")
         print(
