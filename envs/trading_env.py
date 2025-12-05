@@ -17,9 +17,9 @@ class MyTradingEnv(TradingEnv):
         max_holding_time: int = 60 * 24,
         holding_threshold: int = 24,
         max_drawdown_threshold: float = 0.05,
-        lambda_drawdown: float = 0.5,  # в будущем продобрать гиперпараметры
-        lambda_hold: float = 0.1,  # в будущем продобрать гиперпараметры
-        reward_scaling=1.0,
+        lambda_drawdown: float = 0.25,
+        lambda_hold: float = 0.05,
+        reward_scaling=100.0,
         **kwargs,
     ):
         self.initial_balance = initial_balance
@@ -166,15 +166,17 @@ class MyTradingEnv(TradingEnv):
         )
 
     def _calculate_reward(self, prev_portfolio_value: float) -> float:
-        portfolio_change = self._portfolio_value - prev_portfolio_value
+        portfolio_change = (
+            (self._portfolio_value - prev_portfolio_value) / prev_portfolio_value * 100
+        )
 
         drawdown_penalty = 0.0
         hold_penalty = 0.0
 
         if self._position == 1 and self.current_holding_time > 0:
-            drawdown_penalty = self.lambda_drawdown * self.max_drawdown
-            hold_penalty = self.lambda_hold * max(
-                self.current_holding_time - self.holding_threshold, 0
+            drawdown_penalty = self.lambda_drawdown * self.max_drawdown * 100
+            hold_penalty = self.lambda_hold * np.log1p(
+                max(self.current_holding_time - self.holding_threshold, 0)
             )
 
         reward = float(portfolio_change - (drawdown_penalty + hold_penalty))
