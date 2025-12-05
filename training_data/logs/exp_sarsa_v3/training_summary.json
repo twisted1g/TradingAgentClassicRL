@@ -1,0 +1,142 @@
+{
+  "config": {
+    "agent_name": "SARSA_v3",
+    "agent_type": "SARSA",
+    "n_episodes": 20000,
+    "max_steps": 1000,
+    "learning_rate": 0.1,
+    "discount_factor": 0.99,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.995,
+    "lambda_param": null,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 500,
+    "save_frequency": 1000
+  },
+  "training_time": 3285.094692468643,
+  "total_episodes": 20000,
+  "final_metrics": {
+    "episode": 20000,
+    "reward": -75.20847191747254,
+    "steps": 1000,
+    "epsilon": 0.01,
+    "portfolio_value": 992.137203613505,
+    "n_trades": 19,
+    "win_rate": 36.84210526315789,
+    "avg_pnl": -0.3136800637049973,
+    "max_drawdown": 0.016152378251175045,
+    "timestamp": 1764951076.4966156
+  },
+  "checkpoints": [
+    {
+      "episode": 1000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep1000.pkl",
+      "timestamp": 1764947950.2217915
+    },
+    {
+      "episode": 2000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep2000.pkl",
+      "timestamp": 1764948111.3258832
+    },
+    {
+      "episode": 3000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep3000.pkl",
+      "timestamp": 1764948272.4964113
+    },
+    {
+      "episode": 4000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep4000.pkl",
+      "timestamp": 1764948432.2172399
+    },
+    {
+      "episode": 5000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep5000.pkl",
+      "timestamp": 1764948595.507737
+    },
+    {
+      "episode": 6000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep6000.pkl",
+      "timestamp": 1764948755.8601446
+    },
+    {
+      "episode": 7000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep7000.pkl",
+      "timestamp": 1764948915.560206
+    },
+    {
+      "episode": 8000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep8000.pkl",
+      "timestamp": 1764949076.5844665
+    },
+    {
+      "episode": 9000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep9000.pkl",
+      "timestamp": 1764949247.5729825
+    },
+    {
+      "episode": 10000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep10000.pkl",
+      "timestamp": 1764949425.2705407
+    },
+    {
+      "episode": 11000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep11000.pkl",
+      "timestamp": 1764949602.8866751
+    },
+    {
+      "episode": 12000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep12000.pkl",
+      "timestamp": 1764949778.4518461
+    },
+    {
+      "episode": 13000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep13000.pkl",
+      "timestamp": 1764949953.625827
+    },
+    {
+      "episode": 14000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep14000.pkl",
+      "timestamp": 1764950117.8609312
+    },
+    {
+      "episode": 15000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep15000.pkl",
+      "timestamp": 1764950279.7987647
+    },
+    {
+      "episode": 16000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep16000.pkl",
+      "timestamp": 1764950439.7129807
+    },
+    {
+      "episode": 17000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep17000.pkl",
+      "timestamp": 1764950598.6881156
+    },
+    {
+      "episode": 18000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep18000.pkl",
+      "timestamp": 1764950759.1660347
+    },
+    {
+      "episode": 19000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep19000.pkl",
+      "timestamp": 1764950918.3197155
+    },
+    {
+      "episode": 20000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/checkpoint_ep20000.pkl",
+      "timestamp": 1764951077.6966536
+    },
+    {
+      "episode": 20000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v3/final_agent.pkl",
+      "timestamp": 1764951077.7045846
+    }
+  ],
+  "timestamp": "2025-12-05T19:11:17.704696"
+}

@@ -2,7 +2,7 @@
   "config": {
     "agent_name": "QLearning_v3",
     "agent_type": "QLearning",
-    "n_episodes": 1000,
+    "n_episodes": 20000,
     "max_steps": 1000,
     "learning_rate": 0.1,
     "discount_factor": 0.99,
@@ -17,31 +17,126 @@
     "eval_frequency": 500,
     "save_frequency": 1000
   },
-  "training_time": 173.8922131061554,
-  "total_episodes": 1000,
+  "training_time": 2900.5032484531403,
+  "total_episodes": 20000,
   "final_metrics": {
-    "episode": 1000,
-    "reward": 1067.2411966473553,
+    "episode": 20000,
+    "reward": 682.0747615144828,
     "steps": 1000,
     "epsilon": 0.01,
-    "portfolio_value": 1118.2842531177034,
-    "n_trades": 26,
-    "win_rate": 30.76923076923077,
-    "avg_pnl": 4.654472878490075,
-    "max_drawdown": 0.01077967087193665,
-    "timestamp": 1764936220.987569
+    "portfolio_value": 1087.4363028013126,
+    "n_trades": 52,
+    "win_rate": 46.15384615384615,
+    "avg_pnl": 1.7878862433314056,
+    "max_drawdown": 0.016152378251174996,
+    "timestamp": 1764947345.2098486
   },
   "checkpoints": [
     {
       "episode": 1000,
-      "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep1000.pkl",
-      "timestamp": 1764936222.3981614
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep1000.pkl",
+      "timestamp": 1764944589.3643403
     },
     {
-      "episode": 1000,
-      "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/final_agent.pkl",
-      "timestamp": 1764936222.4230642
+      "episode": 2000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep2000.pkl",
+      "timestamp": 1764944734.5141304
+    },
+    {
+      "episode": 3000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep3000.pkl",
+      "timestamp": 1764944878.838446
+    },
+    {
+      "episode": 4000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep4000.pkl",
+      "timestamp": 1764945022.0151632
+    },
+    {
+      "episode": 5000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep5000.pkl",
+      "timestamp": 1764945165.2515128
+    },
+    {
+      "episode": 6000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep6000.pkl",
+      "timestamp": 1764945310.3660007
+    },
+    {
+      "episode": 7000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep7000.pkl",
+      "timestamp": 1764945456.045854
+    },
+    {
+      "episode": 8000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep8000.pkl",
+      "timestamp": 1764945601.3989394
+    },
+    {
+      "episode": 9000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep9000.pkl",
+      "timestamp": 1764945747.13422
+    },
+    {
+      "episode": 10000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep10000.pkl",
+      "timestamp": 1764945892.515615
+    },
+    {
+      "episode": 11000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep11000.pkl",
+      "timestamp": 1764946037.6485236
+    },
+    {
+      "episode": 12000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep12000.pkl",
+      "timestamp": 1764946183.322037
+    },
+    {
+      "episode": 13000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep13000.pkl",
+      "timestamp": 1764946330.396636
+    },
+    {
+      "episode": 14000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep14000.pkl",
+      "timestamp": 1764946475.6195643
+    },
+    {
+      "episode": 15000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep15000.pkl",
+      "timestamp": 1764946621.880105
+    },
+    {
+      "episode": 16000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep16000.pkl",
+      "timestamp": 1764946767.294613
+    },
+    {
+      "episode": 17000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep17000.pkl",
+      "timestamp": 1764946913.2881536
+    },
+    {
+      "episode": 18000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep18000.pkl",
+      "timestamp": 1764947057.0600839
+    },
+    {
+      "episode": 19000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep19000.pkl",
+      "timestamp": 1764947202.479025
+    },
+    {
+      "episode": 20000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/checkpoint_ep20000.pkl",
+      "timestamp": 1764947346.377227
+    },
+    {
+      "episode": 20000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_qlearn_v3/final_agent.pkl",
+      "timestamp": 1764947346.3849902
     }
   ],
-  "timestamp": "2025-12-05T15:03:42.423280"
+  "timestamp": "2025-12-05T18:09:06.385089"
 }

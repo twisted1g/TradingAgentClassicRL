@@ -8,7 +8,7 @@ from .base_classical_agent import BaseClassicalAgent
 class SarsaLambdaAgent(BaseClassicalAgent):
     def __init__(
         self,
-        lambda_param: float = 0.9,
+        lambda_param: float = 0.6,
         replace_traces: bool = True,
         name: str = "SARSA(lambda)",
         **kwargs,
