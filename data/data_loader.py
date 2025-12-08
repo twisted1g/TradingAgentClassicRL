@@ -4,8 +4,8 @@ import datetime
 download(
     exchange_names=["binance"],
     symbols=["BTC/USDT"],
-    timeframe="15m",
+    timeframe="1h",
     dir="./data",
-    since=datetime.datetime(year=2025, month=1, day=1),
-    until=datetime.datetime(year=2025, month=12, day=5),
+    since=datetime.datetime(year=2021, month=1, day=1),
+    until=datetime.datetime(year=2021, month=12, day=31),
 )
