@@ -11,7 +11,7 @@ from .training_logger import TrainingLogger
 class TrainingManager:
     def __init__(
         self,
-        base_log_dir: str = "   training_data/logs",
+        base_log_dir: str = "training_data/logs",
         base_checkpoint_dir: str = "training_data/checkpoints",
     ):
         self.base_log_dir = Path(base_log_dir)
@@ -50,7 +50,7 @@ class TrainingManager:
 
         start_time = time.time()
 
-        for episode in range(config.n_episodes):
+        for episode in range(config.n_episodes_start, config.n_episodes):
 
             state, info = env.reset()
             done = False
@@ -60,20 +60,14 @@ class TrainingManager:
             action = agent.select_action(state, training=True)
 
             while not done and steps < config.max_steps:
-
                 next_state, reward, terminated, truncated, info = env.step(action)
-
                 done = terminated or truncated
 
-                if not done:
-                    next_action = agent.select_action(next_state, training=True)
-                else:
-                    next_action = 0
-
+                next_action = (
+                    agent.select_action(next_state, training=True) if not done else 0
+                )
                 agent.update(state, action, reward, next_state, done, next_action)
-
-                state = next_state
-                action = next_action
+                state, action = next_state, next_action
 
                 episode_reward += reward
                 steps += 1
@@ -81,16 +75,19 @@ class TrainingManager:
             agent.episode_count += 1
             agent.episode_rewards.append(episode_reward)
             agent.episode_lens.append(steps)
-            agent.decay_epsilon()
+            if hasattr(agent, "decay_epsilon"):
+                agent.decay_epsilon()
 
+            # Берём корректный портфель из env
             env_metrics = env.get_metrics()
+            portfolio_value = info.get("portfolio_value", env.portfolio_value)
 
             episode_metrics = EpisodeMetrics(
                 episode=episode + 1,
                 reward=episode_reward,
                 steps=steps,
-                epsilon=agent.epsilon,
-                portfolio_value=env._portfolio_value,
+                epsilon=getattr(agent, "epsilon", None),
+                portfolio_value=portfolio_value,
                 n_trades=env_metrics.get("total_trades", 0),
                 win_rate=env_metrics.get("win_rate", 0),
                 avg_pnl=env_metrics.get("avg_pnl", 0),
@@ -119,13 +116,12 @@ class TrainingManager:
                         f"  Оценка: {eval_results['mean_reward']:.2f} ± {eval_results['std_reward']:.2f}"
                     )
                     print(
-                        f"  Epsilon: {agent.epsilon:.4f} | Состояний: {len(agent.q_table)}"
+                        f"  Epsilon: {getattr(agent, 'epsilon', 0.0):.4f} | Состояний: {len(agent.q_table)}"
                     )
                     print(
                         f"  Сделок: {env_metrics.get('total_trades', 0)} | Win Rate: {env_metrics.get('win_rate', 0):.1f}%"
                     )
-                    print(f"  Портфель: ${env._portfolio_value:.2f}")
-                    print()
+                    print(f"  Портфель: ${portfolio_value:.2f}\n")
 
             if (episode + 1) % config.save_frequency == 0:
                 checkpoint_path = checkpoint_dir / f"checkpoint_ep{episode+1}.pkl"
@@ -133,11 +129,9 @@ class TrainingManager:
                 logger.log_checkpoint(episode + 1, str(checkpoint_path))
 
         training_time = time.time() - start_time
-
         final_path = checkpoint_dir / "final_agent.pkl"
         agent.save(str(final_path))
         logger.log_checkpoint(config.n_episodes, str(final_path))
-
         logger.save_summary(config, training_time)
 
         if verbose:
@@ -154,5 +148,115 @@ class TrainingManager:
             "checkpoint_dir": str(checkpoint_dir),
             "final_agent_path": str(final_path),
             "training_time": training_time,
+            "final_metrics": episode_metrics.to_dict(),
+        }
+
+    def continue_training(
+        self,
+        agent,
+        env,
+        config: TrainingConfig,
+        checkpoint_path: str,
+        experiment_name: Optional[str] = None,
+        verbose: bool = True,
+    ):
+        if verbose:
+            print(f"\nЗагрузка агента из {checkpoint_path}")
+        agent.load(checkpoint_path)
+
+        if experiment_name is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            experiment_name = f"{config.agent_name}_continue_{timestamp}"
+
+        logger = TrainingLogger(self.base_log_dir, experiment_name)
+        checkpoint_dir = self.base_checkpoint_dir / experiment_name
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        with open(logger.log_dir / "continue_config.json", "w") as f:
+            json.dump(config.to_dict(), f, indent=2)
+
+        if verbose:
+            print(f"Эксперимент: {experiment_name}")
+            print(f"Эпизодов: {config.n_episodes}\n")
+
+        start_time = time.time()
+
+        for episode in range(config.n_episodes_start, config.n_episodes):
+            state, info = env.reset()
+            done = False
+            episode_reward = 0
+            steps = 0
+
+            action = agent.select_action(state, training=True)
+
+            while not done and steps < config.max_steps:
+                next_state, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+
+                next_action = (
+                    agent.select_action(next_state, training=True) if not done else 0
+                )
+                agent.update(state, action, reward, next_state, done, next_action)
+                state, action = next_state, next_action
+
+                episode_reward += reward
+                steps += 1
+
+            agent.episode_count += 1
+            agent.episode_rewards.append(episode_reward)
+            agent.episode_lens.append(steps)
+            if hasattr(agent, "decay_epsilon"):
+                agent.decay_epsilon()
+
+            env_metrics = env.get_metrics()
+            portfolio_value = info.get("portfolio_value", env.portfolio_value)
+
+            episode_metrics = EpisodeMetrics(
+                episode=episode + 1,
+                reward=episode_reward,
+                steps=steps,
+                epsilon=getattr(agent, "epsilon", None),
+                portfolio_value=portfolio_value,
+                n_trades=env_metrics.get("total_trades", 0),
+                win_rate=env_metrics.get("win_rate", 0),
+                avg_pnl=env_metrics.get("avg_pnl", 0),
+                max_drawdown=env_metrics.get("max_drawdown", 0),
+                timestamp=time.time(),
+            )
+            logger.log_episode(episode_metrics)
+
+            if (episode + 1) % config.eval_frequency == 0:
+                eval_results = agent.evaluate(
+                    env, n_episodes=10, max_steps=config.max_steps
+                )
+                logger.log_evaluation(episode + 1, eval_results)
+
+                if verbose:
+                    print(
+                        f"[Continue] Эпизод {episode+1}/{config.n_episodes} | "
+                        f"Reward={episode_reward:.2f} | "
+                        f"Eps={getattr(agent, 'epsilon', 0):.3f}"
+                    )
+
+            if (episode + 1) % config.save_frequency == 0:
+                cp = checkpoint_dir / f"continue_ep{episode+1}.pkl"
+                agent.save(str(cp))
+                logger.log_checkpoint(episode + 1, str(cp))
+
+        total_time = time.time() - start_time
+        final_path = checkpoint_dir / "final_continue_agent.pkl"
+        agent.save(str(final_path))
+        logger.log_checkpoint(config.n_episodes, str(final_path))
+        logger.save_summary(config, total_time)
+
+        print("\n=== Дообучение завершено ===")
+        print(f"Время: {total_time/60:.2f} минут")
+        print(f"Финальная награда: {episode_metrics.reward:.2f}")
+
+        return {
+            "experiment_name": experiment_name,
+            "checkpoint_dir": str(checkpoint_dir),
+            "final_agent_path": str(final_path),
+            "training_time": total_time,
             "final_metrics": episode_metrics.to_dict(),
         }

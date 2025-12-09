@@ -84,4 +84,4 @@ class TrainingLogger:
         with open(self.log_dir / "training_summary.json", "w") as f:
             json.dump(summary, f, indent=2)
 
-        print(f"\n✓ Логи сохранены в: {self.log_dir}")
+        print(f"\n Логи сохранены в: {self.log_dir}")

@@ -16,6 +16,8 @@ class TrainingConfig:
     epsilon_end: float
     epsilon_decay: float
 
+    n_episodes_start: int = 0
+
     lambda_param: Optional[float] = None
     replace_traces: Optional[bool] = None
 
