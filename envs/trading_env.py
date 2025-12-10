@@ -261,7 +261,12 @@ class MyTradingEnv(Env):
     def reset(
         self, seed: Optional[int] = None, options: Optional[dict] = None
     ) -> Tuple[np.ndarray, Dict]:
-        self.current_step = int(self.window_size)
+        if self.max_steps is None:
+            start_max = len(self.df) - 1
+        else:
+            start_max = len(self.df) - self.max_steps
+
+        self.current_step = np.random.randint(self.window_size, start_max)
         self.position = 0
         self.units = 0.0
         self.entry_price = 0.0

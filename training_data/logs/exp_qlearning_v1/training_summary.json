@@ -2,8 +2,8 @@
   "config": {
     "agent_name": "QLearning_v1",
     "agent_type": "QLearning",
-    "n_episodes": 1000,
-    "max_steps": 1000,
+    "n_episodes": 100,
+    "max_steps": 8000,
     "learning_rate": 0.05,
     "discount_factor": 0.9,
     "epsilon_start": 1.0,
@@ -18,31 +18,26 @@
     "eval_frequency": 500,
     "save_frequency": 1000
   },
-  "training_time": 445.4919695854187,
-  "total_episodes": 1000,
+  "training_time": 294.2818374633789,
+  "total_episodes": 100,
   "final_metrics": {
-    "episode": 1000,
-    "reward": -63.002731760745895,
-    "steps": 1000,
-    "epsilon": 0.01,
-    "portfolio_value": 984.869566343433,
-    "n_trades": 8,
-    "win_rate": 75.0,
-    "avg_pnl": -1.7906896113289679,
-    "max_drawdown": 0.0719196888330369,
-    "timestamp": 1765318042.4177969
+    "episode": 100,
+    "reward": -12298.317536748584,
+    "steps": 8000,
+    "epsilon": 0.6057704364907278,
+    "portfolio_value": 211.0663463333932,
+    "n_trades": 1335,
+    "win_rate": 40.823970037453186,
+    "avg_pnl": -0.5351315339186369,
+    "max_drawdown": 0.08626398339291856,
+    "timestamp": 1765396059.0176537
   },
   "checkpoints": [
     {
-      "episode": 1000,
-      "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_qlearning_v1/checkpoint_ep1000.pkl",
-      "timestamp": 1765318046.2680333
-    },
-    {
-      "episode": 1000,
+      "episode": 100,
       "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_qlearning_v1/final_agent.pkl",
-      "timestamp": 1765318046.2838311
+      "timestamp": 1765396059.0615652
     }
   ],
-  "timestamp": "2025-12-10T01:07:26.284069"
+  "timestamp": "2025-12-10T22:47:39.061746"
 }

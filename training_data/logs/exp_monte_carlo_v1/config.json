@@ -1,7 +1,7 @@
 {
   "agent_name": "Monte_Carlo_v1",
   "agent_type": "Monte_Carlo",
-  "n_episodes": 1000,
+  "n_episodes": 100,
   "max_steps": 500,
   "learning_rate": 0.05,
   "discount_factor": 0.9,
