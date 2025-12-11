@@ -2,8 +2,8 @@
   "config": {
     "agent_name": "Monte_Carlo_v1",
     "agent_type": "Monte_Carlo",
-    "n_episodes": 100,
-    "max_steps": 500,
+    "n_episodes": 1000,
+    "max_steps": 1000,
     "learning_rate": 0.05,
     "discount_factor": 0.9,
     "epsilon_start": 1.0,
@@ -18,26 +18,31 @@
     "eval_frequency": 500,
     "save_frequency": 1000
   },
-  "training_time": 20.511725664138794,
-  "total_episodes": 100,
+  "training_time": 406.25314450263977,
+  "total_episodes": 1000,
   "final_metrics": {
-    "episode": 100,
-    "reward": 330.40139407697984,
-    "steps": 500,
-    "epsilon": 0.6057704364907278,
-    "portfolio_value": 1178.9874190404648,
-    "n_trades": 79,
-    "win_rate": 56.9620253164557,
-    "avg_pnl": 2.37309563570093,
-    "max_drawdown": 0.04028430777690586,
-    "timestamp": 1765396079.753558
+    "episode": 1000,
+    "reward": -1831.604443398232,
+    "steps": 1000,
+    "epsilon": 0.01,
+    "portfolio_value": 812.3434681933805,
+    "n_trades": 174,
+    "win_rate": 48.85057471264368,
+    "avg_pnl": -0.9780215319449374,
+    "max_drawdown": 0.09312982768447485,
+    "timestamp": 1765399022.9904613
   },
   "checkpoints": [
     {
-      "episode": 100,
+      "episode": 1000,
+      "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/checkpoint_ep1000.pkl",
+      "timestamp": 1765399026.6808133
+    },
+    {
+      "episode": 1000,
       "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/final_agent.pkl",
-      "timestamp": 1765396079.7958195
+      "timestamp": 1765399026.716605
     }
   ],
-  "timestamp": "2025-12-10T22:47:59.796004"
+  "timestamp": "2025-12-10T23:37:06.716742"
 }

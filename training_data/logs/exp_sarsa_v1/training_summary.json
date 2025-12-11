@@ -2,8 +2,8 @@
   "config": {
     "agent_name": "SARSA_v1",
     "agent_type": "SARSA",
-    "n_episodes": 100,
-    "max_steps": 8000,
+    "n_episodes": 1000,
+    "max_steps": 2000,
     "learning_rate": 0.05,
     "discount_factor": 0.9,
     "epsilon_start": 1.0,
@@ -18,26 +18,31 @@
     "eval_frequency": 500,
     "save_frequency": 1000
   },
-  "training_time": 316.8565409183502,
-  "total_episodes": 100,
+  "training_time": 890.9444117546082,
+  "total_episodes": 1000,
   "final_metrics": {
-    "episode": 100,
-    "reward": -7178.121630738132,
-    "steps": 8000,
-    "epsilon": 0.6057704364907278,
-    "portfolio_value": 452.5764423450958,
-    "n_trades": 1264,
-    "win_rate": 43.67088607594937,
-    "avg_pnl": -0.35492635643406373,
-    "max_drawdown": 0.10689870265513784,
-    "timestamp": 1765396396.8708963
+    "episode": 1000,
+    "reward": -288.5615399674489,
+    "steps": 2000,
+    "epsilon": 0.01,
+    "portfolio_value": 943.211538753621,
+    "n_trades": 63,
+    "win_rate": 39.682539682539684,
+    "avg_pnl": -0.8028223622435875,
+    "max_drawdown": 0.0220400020252513,
+    "timestamp": 1765399910.366203
   },
   "checkpoints": [
     {
-      "episode": 100,
+      "episode": 1000,
+      "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v1/checkpoint_ep1000.pkl",
+      "timestamp": 1765399917.9109092
+    },
+    {
+      "episode": 1000,
       "path": "/mnt/d/Study/Code/ml/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_v1/final_agent.pkl",
-      "timestamp": 1765396396.925826
+      "timestamp": 1765399917.944841
     }
   ],
-  "timestamp": "2025-12-10T22:53:16.926097"
+  "timestamp": "2025-12-10T23:51:57.945092"
 }
