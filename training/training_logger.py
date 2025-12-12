@@ -58,11 +58,33 @@ class TrainingLogger:
         df.to_csv(self.episodes_csv, mode="a", header=False, index=False)
 
     def log_evaluation(self, episode: int, eval_results: Dict):
-        eval_data = {"episode": episode, "timestamp": time.time(), **eval_results}
+        eval_data = {
+            "episode": episode,
+            "mean_reward": eval_results["mean_reward"],
+            "std_reward": eval_results["std_reward"],
+            "min_reward": eval_results["min_reward"],
+            "max_reward": eval_results["max_reward"],
+            "mean_length": eval_results["mean_length"],
+            "timestamp": time.time(),
+        }
+
         self.eval_results.append(eval_data)
 
         df = pd.DataFrame([eval_data])
+        df = df[
+            [
+                "episode",
+                "mean_reward",
+                "std_reward",
+                "min_reward",
+                "max_reward",
+                "mean_length",
+                "timestamp",
+            ]
+        ]
+
         df.to_csv(self.eval_csv, mode="a", header=False, index=False)
+
 
     def log_checkpoint(self, episode: int, checkpoint_path: str):
         self.checkpoint_info.append(

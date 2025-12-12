@@ -52,6 +52,7 @@ class MyTradingEnv(Env):
         self.max_drawdown = 0.0
         self.trade_history = []
         self._steps_elapsed = 0
+        self.last_exit_reason = None
 
     def _prepare_data(self):
         df = self.df
@@ -146,23 +147,31 @@ class MyTradingEnv(Env):
             dtype=np.int64,
         )
 
+
     def _calculate_reward(self, prev_portfolio_value: float) -> float:
-        if prev_portfolio_value <= 0:
+        if self.last_exit_reason is None:
             return 0.0
 
-        portfolio_pct_change = (
-            (self.portfolio_value - prev_portfolio_value) / prev_portfolio_value * 100.0
-        )
+        trade = self.trade_history[-1]
+        pnl = trade["pnl"]
+        entry_price = trade["entry_price"]
+        if entry_price == 0:
+            return 0.0
 
-        drawdown_penalty = 0.0
-        hold_penalty = 0.0
-        if self.position == 1 and self.current_holding_time > 0:
-            drawdown_penalty = self.lambda_drawdown * (self.max_drawdown * 100.0)
-            extra_hold = max(self.current_holding_time - self.holding_threshold, 0)
-            hold_penalty = self.lambda_hold * np.log1p(extra_hold)
+        pnl_pct = pnl / entry_price
 
-        reward = portfolio_pct_change - (drawdown_penalty + hold_penalty)
-        return float(reward * self.reward_scaling)
+        dd = trade["max_drawdown"]
+        dd_penalty = self.lambda_drawdown * dd
+
+        hold = trade["holding_time"]
+        extra_hold = max(hold - self.holding_threshold, 0)
+        hold_penalty = self.lambda_hold * np.log1p(extra_hold)
+
+        reward = pnl_pct - dd_penalty - hold_penalty
+        reward = float(np.clip(reward * self.reward_scaling, -10, +10))
+
+        return reward
+
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
         assert self.action_space.contains(action)
@@ -238,6 +247,8 @@ class MyTradingEnv(Env):
                 self.position = 0
                 self.current_holding_time = 0
                 self.max_drawdown = 0.0
+
+        self.last_exit_reason = exit_reason
 
         self.current_step += 1
         self._steps_elapsed += 1
