@@ -5,8 +5,6 @@ import time
 
 @dataclass
 class TrainingConfig:
-    """Конфигурация для обучения агентов"""
-    # Параметры агента
     agent_name: str = "QLearning"
     agent_type: str = "QLearning"
     n_episodes: int = 5000
@@ -16,29 +14,20 @@ class TrainingConfig:
     discount_factor: float = 0.95
     epsilon_start: float = 1.0
     epsilon_end: float = 0.01
-    epsilon_decay: float = 0.999
-    lr_decay: float = 0.9999  # NEW
-    min_learning_rate: float = 0.001  # NEW
+    epsilon_decay: float = 0.9998
     
-    # Параметры среды
     initial_balance: float = 1000.0
     window_size: int = 10
     commission: float = 0.0001
-    slippage: float = 0.0005
-    max_holding_time: int = 60 * 24
-    holding_threshold: int = 24
-    max_drawdown_threshold: float = 0.05
-    lambda_drawdown: float = 0.25
-    lambda_hold: float = 0.05
-    reward_scaling: float = 1.0
+    slippage: float = 0.0001
+    max_holding_time: int = 72
+    max_drawdown_threshold: float = 0.08
     
-    # Параметры обучения
     eval_frequency: int = 200
     save_frequency: int = 1000
-    patience: int = 10  # NEW: эпизодов для ранней остановки
-    seed: int = 42  # NEW: seed для воспроизводимости
+    patience: int = 10
+    seed: int = 42
     
-    # Дополнительные параметры (для разных агентов)
     extra_params: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict[str, Any]:

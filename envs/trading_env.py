@@ -14,15 +14,9 @@ class MyTradingEnv(Env):
         window_size: int = 10,
         commission: float = 0.0001,
         slippage: float = 0.0005,
-        max_holding_time: int = 60 * 24,
-        holding_threshold: int = 24,
-        max_drawdown_threshold: float = 0.05,
-        lambda_drawdown: float = 0.25,
-        lambda_hold: float = 0.05,
-        reward_scaling: float = 100.0,
+        max_holding_time: int = 72,
+        max_drawdown_threshold: float = 0.08,
         max_steps: Optional[int] = None,
-        reward_normalization: bool = True,
-        incremental_reward: bool = True,
         **kwargs,
     ):
         self.initial_balance = float(initial_balance)
@@ -30,30 +24,18 @@ class MyTradingEnv(Env):
         self.commission = float(commission)
         self.slippage = float(slippage)
         self.max_holding_time = int(max_holding_time)
-        self.holding_threshold = int(holding_threshold)
         self.max_drawdown_threshold = float(max_drawdown_threshold)
-        self.lambda_drawdown = float(lambda_drawdown)
-        self.lambda_hold = float(lambda_hold)
-        self.reward_scaling = float(reward_scaling)
         self.max_steps = int(max_steps) if max_steps is not None else None
-        self.reward_normalization = reward_normalization
-        self.incremental_reward = incremental_reward
 
         self.df = df.copy().reset_index(drop=True)
         self._prepare_data()
 
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.MultiDiscrete([3, 3, 3, 3, 2, 3])
-
-        # Для нормализации наград
-        self.reward_mean = 0.0
-        self.reward_std = 1.0
-        self.reward_history = []
         
         self._reset_state()
 
     def _reset_state(self):
-        """Сброс состояния среды"""
         self.current_step = None
         self.position = 0
         self.units = 0.0
@@ -69,7 +51,6 @@ class MyTradingEnv(Env):
         self.prev_portfolio_value = self.initial_balance
 
     def _prepare_data(self):
-        """Подготовка технических индикаторов"""
         df = self.df
         if "close" not in df.columns:
             raise ValueError("DataFrame must contain 'close' column")
@@ -163,96 +144,11 @@ class MyTradingEnv(Env):
         )
 
     def _calculate_reward(self) -> float:
-        """
-        ИСПРАВЛЕННАЯ система наград:
-        1. Инкрементальные награды для открытых позиций
-        2. Финальные награды при закрытии
-        3. Правильный расчет PnL%
-        """
+        portfolio_change = self.portfolio_value - self.prev_portfolio_value
+        portfolio_change_pct = portfolio_change / (self.prev_portfolio_value + 1e-8)
+        reward = portfolio_change_pct * 100.0
         
-        # 1. ДЕРЖИМ ПОЗИЦИЮ - инкрементальная награда
-        if self.last_exit_reason is None and self.position == 1:
-            if not self.incremental_reward:
-                return 0.0
-                
-            # Нереализованная прибыль
-            unrealized_pnl = self.position_value - (self.units * self.entry_price)
-            invested_amount = self.units * self.entry_price
-            pnl_pct = unrealized_pnl / (invested_amount + 1e-8)
-            
-            # Базовая награда от изменения PnL%
-            reward = pnl_pct * 10.0  # Меньший масштаб для инкрементальных наград
-            
-            # Штраф за drawdown во время холдинга
-            if self.max_drawdown > 0.01:
-                dd_penalty = self.lambda_drawdown * (self.max_drawdown * 20)
-                reward -= dd_penalty
-            
-            # Небольшой штраф за длительное холдинг убыточной позиции
-            if pnl_pct < -0.02 and self.current_holding_time > self.holding_threshold:
-                hold_penalty = 0.01 * (self.current_holding_time - self.holding_threshold)
-                reward -= hold_penalty
-                
-            return float(np.clip(reward, -1.0, 1.0))
-        
-        # 2. НЕТ ПОЗИЦИИ - нулевая награда
-        if self.last_exit_reason is None and self.position == 0:
-            return 0.0
-        
-        # 3. ЗАКРЫЛИ ПОЗИЦИЮ - финальная награда
-        if self.last_exit_reason is not None:
-            trade = self.trade_history[-1]
-            
-            # ИСПРАВЛЕНО: правильный расчет invested amount
-            invested_amount = self.units * trade["entry_price"]
-            pnl = trade["pnl"]
-            pnl_pct = pnl / (invested_amount + 1e-8)
-            
-            # Базовая награда от PnL%
-            reward = pnl_pct * 100.0
-            
-            # Штраф за максимальный drawdown во время сделки
-            dd = trade["max_drawdown"]
-            dd_penalty = self.lambda_drawdown * (dd * 50)
-            reward -= dd_penalty
-            
-            # Штраф за длительное холдинг УБЫТОЧНОЙ позиции
-            hold = trade["holding_time"]
-            if pnl < 0 and hold > self.holding_threshold:
-                extra_hold = hold - self.holding_threshold
-                hold_penalty = self.lambda_hold * extra_hold * 0.5
-                reward -= hold_penalty
-            
-            # Бонус за правильное закрытие прибыльной сделки
-            if trade["exit_reason"] == "agent" and pnl > 0:
-                reward += 0.5
-            
-            # Бонус за быструю прибыльную сделку
-            if pnl > 0 and hold <= 5:
-                reward += 0.3
-            
-            # Штраф за закрытие по drawdown
-            if trade["exit_reason"] == "drawdown":
-                reward -= 0.5
-                
-            return float(np.clip(reward, -3.0, 3.0))
-        
-        return 0.0
-
-    def _normalize_reward(self, reward: float) -> float:
-        """Нормализация награды для стабильности обучения"""
-        if not self.reward_normalization:
-            return reward
-            
-        self.reward_history.append(reward)
-        
-        # Обновляем статистику каждые 100 шагов
-        if len(self.reward_history) >= 100:
-            self.reward_mean = np.mean(self.reward_history[-1000:])
-            self.reward_std = np.std(self.reward_history[-1000:]) + 1e-8
-            
-        normalized = (reward - self.reward_mean) / self.reward_std
-        return float(np.clip(normalized, -5.0, 5.0))
+        return float(reward)
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
         assert self.action_space.contains(action)
@@ -261,7 +157,6 @@ class MyTradingEnv(Env):
         current_price = float(self.df.iloc[self.current_step]["close"])
         self.last_exit_reason = None
 
-        # ОТКРЫТИЕ ПОЗИЦИИ
         if self.position == 0 and action == 1:
             price_with_slip = current_price * (1.0 + self.slippage)
             invest_amount = self.portfolio_value
@@ -277,13 +172,11 @@ class MyTradingEnv(Env):
             self.position_value = units * current_price
             self.portfolio_value = self.cash + self.position_value
 
-        # ХОЛДИНГ ПОЗИЦИИ
         elif self.position == 1:
             self.current_holding_time += 1
             self.position_value = self.units * current_price
             self.portfolio_value = self.cash + self.position_value
 
-            # Отслеживание drawdown
             unrealized_pnl = self.position_value - (self.units * self.entry_price)
             current_drawdown = (
                 -unrealized_pnl / (self.units * self.entry_price + 1e-12)
@@ -292,7 +185,6 @@ class MyTradingEnv(Env):
             )
             self.max_drawdown = max(self.max_drawdown, current_drawdown)
 
-            # Проверка условий закрытия
             should_close = (
                 action == 2
                 or self.current_holding_time >= self.max_holding_time
@@ -300,7 +192,6 @@ class MyTradingEnv(Env):
             )
             
             if should_close:
-                # Определяем причину закрытия
                 if action == 2:
                     self.last_exit_reason = "agent"
                 elif self.current_holding_time >= self.max_holding_time:
@@ -308,7 +199,6 @@ class MyTradingEnv(Env):
                 else:
                     self.last_exit_reason = "drawdown"
 
-                # Закрываем позицию
                 exit_price = current_price * (1.0 - self.slippage)
                 exit_value = self.units * exit_price
                 commission_fee = exit_value * self.commission
@@ -318,35 +208,29 @@ class MyTradingEnv(Env):
                 self.position_value = 0.0
                 self.portfolio_value = self.cash
 
-                # Сохраняем сделку
                 self.trade_history.append({
                     "entry_price": self.entry_price,
                     "exit_price": exit_price,
                     "pnl": float(pnl),
-                    "units": float(self.units),  # Сохраняем units
+                    "units": float(self.units),
                     "holding_time": int(self.current_holding_time),
                     "max_drawdown": float(self.max_drawdown),
                     "exit_reason": self.last_exit_reason,
                 })
 
-                # Сбрасываем состояние позиции
                 self.units = 0.0
                 self.entry_price = 0.0
                 self.position = 0
                 self.current_holding_time = 0
                 self.max_drawdown = 0.0
 
-        # Переход к следующему шагу
         self.current_step += 1
         self._steps_elapsed += 1
 
-        # Проверка окончания эпизода
         terminated = self.current_step >= len(self.df) - 1
         truncated = self.max_steps is not None and self._steps_elapsed >= self.max_steps
         
-        # Расчет награды
-        raw_reward = self._calculate_reward()
-        reward = self._normalize_reward(raw_reward)
+        reward = self._calculate_reward()
         
         obs = self._get_observation()
 
@@ -357,7 +241,6 @@ class MyTradingEnv(Env):
             "current_price": float(current_price),
             "n_trades": len(self.trade_history),
             "last_exit_reason": self.last_exit_reason,
-            "raw_reward": float(raw_reward),
         }
 
         return obs, reward, terminated, truncated, info
@@ -365,11 +248,9 @@ class MyTradingEnv(Env):
     def reset(
         self, seed: Optional[int] = None, options: Optional[dict] = None
     ) -> Tuple[np.ndarray, Dict]:
-        """ИСПРАВЛЕННЫЙ метод reset"""
         if seed is not None:
             np.random.seed(seed)
         
-        # ВАЖНО: сначала определяем current_step
         if self.max_steps is None:
             start_max = len(self.df) - 1
         else:
@@ -377,7 +258,6 @@ class MyTradingEnv(Env):
 
         self.current_step = np.random.randint(self.window_size, start_max)
         
-        # Потом сбрасываем остальное состояние
         self.position = 0
         self.units = 0.0
         self.entry_price = 0.0
@@ -389,11 +269,12 @@ class MyTradingEnv(Env):
         self.trade_history = []
         self._steps_elapsed = 0
         
-        # Добавьте этот атрибут если его нет
         if not hasattr(self, 'prev_portfolio_value'):
             self.prev_portfolio_value = float(self.initial_balance)
         else:
             self.prev_portfolio_value = float(self.initial_balance)
+        
+        self.last_exit_reason = None
 
         obs = self._get_observation()
         return obs, {}
@@ -427,7 +308,6 @@ class MyTradingEnv(Env):
         total_loss = abs(trades[trades["pnl"] < 0]["pnl"].sum())
         profit_factor = total_profit / (total_loss + 1e-8)
         
-        # Sharpe ratio (упрощенный)
         returns = trades["pnl"] / self.initial_balance
         sharpe = np.mean(returns) / (np.std(returns) + 1e-8) * np.sqrt(252)
         

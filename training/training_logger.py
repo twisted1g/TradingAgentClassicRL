@@ -24,7 +24,7 @@ class TrainingLogger:
         if not self.eval_csv.exists():
             pd.DataFrame(columns=["episode","mean_reward","std_reward",
                                   "min_reward","max_reward","mean_portfolio",
-                                  "mean_trades","timestamp"]).to_csv(self.eval_csv, index=False)
+                                  "mean_trades","mean_steps","timestamp"]).to_csv(self.eval_csv, index=False)
 
     def log_episode(self, metrics: EpisodeMetrics):
         self.episode_metrics.append(metrics)
@@ -42,12 +42,30 @@ class TrainingLogger:
         summary = {
             "config": config.to_dict(),
             "training_time": training_time,
+            "training_time_minutes": training_time / 60,
             "best_val_reward": best_val_reward,
             "total_episodes": len(self.episode_metrics),
             "final_metrics": self.episode_metrics[-1].to_dict() if self.episode_metrics else {},
             "checkpoints": self.checkpoint_info,
+            "total_evaluations": len(self.eval_results),
             "timestamp": datetime.now().isoformat(),
         }
-        with open(self.log_dir / "training_summary.json", "w") as f:
+        
+        summary_path = self.log_dir / "training_summary.json"
+        with open(summary_path, "w") as f:
             json.dump(summary, f, indent=2)
-        print(f"\n Логи сохранены в: {self.log_dir}")
+        
+        summary_text = f"""
+{'='*80}
+СВОДКА ОБУЧЕНИЯ
+{'='*80}
+Агент: {config.agent_name}
+Эксперимент: {self.log_dir.name}
+Время обучения: {training_time/60:.2f} минут
+Всего эпизодов: {len(self.episode_metrics)}
+Всего оценок: {len(self.eval_results)}
+Лучшая eval награда: {best_val_reward:.2f}
+{'='*80}
+"""
+        with open(self.log_dir / "summary.txt", "w") as f:
+            f.write(summary_text)

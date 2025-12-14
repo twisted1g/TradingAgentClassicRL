@@ -41,7 +41,6 @@ class MovingAverageAgent(BaseAgent):
             "fast_period": self.fast_period,
             "slow_period": self.slow_period,
             "use_exponential": self.use_exponential,
-            "note": "MA values not computed; using ma_trend_discrete from env",
         }
 
     def __str__(self) -> str:

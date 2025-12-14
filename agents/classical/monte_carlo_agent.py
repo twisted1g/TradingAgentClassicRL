@@ -5,6 +5,7 @@ from .base_classical_agent import BaseClassicalAgent
 
 
 class MonteCarloAgent(BaseClassicalAgent):
+
     def __init__(
         self,
         n_actions: int = 3,
@@ -17,6 +18,7 @@ class MonteCarloAgent(BaseClassicalAgent):
         first_visit: bool = True,
         use_sample_average: bool = False,
         return_clip: Optional[Tuple[float, float]] = None,
+        **kwargs,
     ):
         super().__init__(
             n_actions=n_actions,
@@ -26,16 +28,21 @@ class MonteCarloAgent(BaseClassicalAgent):
             epsilon_end=epsilon_end,
             epsilon_decay=epsilon_decay,
             name=name,
+            **kwargs,
         )
 
         self.first_visit = first_visit
         self.use_sample_average = use_sample_average
         self.return_clip = return_clip
 
-        self.q_table = defaultdict(lambda: np.zeros(self.n_actions))
         self.returns_count = defaultdict(int)
-
         self.episode_transitions: List[Tuple[tuple, int, float]] = []
+    
+    def _start_new_episode(self):
+        self.episode_transitions.clear()
+    
+    def _end_episode(self):
+        pass
 
     def update(
         self,
@@ -78,14 +85,16 @@ class MonteCarloAgent(BaseClassicalAgent):
             else:
                 alpha = self.learning_rate
 
-            self.q_table[s][a] = current_q + alpha * (G - current_q)
+            td_error = G - current_q
+            self.q_table[s][a] = current_q + alpha * td_error
+
+            self.td_error_history.append(td_error)
 
         self.episode_transitions.clear()
 
     def train_episode(
         self, env, max_steps: int = 1000, verbose: bool = False
     ) -> Dict[str, float]:
-
         state, info = env.reset()
         done = False
         steps = 0
@@ -114,15 +123,11 @@ class MonteCarloAgent(BaseClassicalAgent):
         self.episode_lens.append(int(steps))
         self.decay_epsilon()
 
-        if self.q_table:
-            avg_q = np.mean([np.max(v) for v in self.q_table.values()])
-            self.q_value_history.append(float(avg_q))
-
         return {
             "episode": self.episode_count,
             "reward": float(episode_reward),
             "steps": int(steps),
             "epsilon": float(self.epsilon),
-            "portfolio_value": float(info.get("portfolio_value", 0)),
+            "portfolio_value": float(info.get("portfolio_value", env.initial_balance)),
             "n_trades": int(info.get("n_trades", 0)),
         }

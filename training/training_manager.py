@@ -26,68 +26,50 @@ class TrainingManager:
         self.base_log_dir.mkdir(parents=True, exist_ok=True)
         self.base_checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    def _create_validation_split(self, df: pd.DataFrame, val_ratio: float = 0.2) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Разделяет данные на train и validation"""
-        split_idx = int(len(df) * (1 - val_ratio))
-        train_df = df.iloc[:split_idx].copy()
-        val_df = df.iloc[split_idx:].copy()
-        return train_df, val_df
-
-    def _create_envs(self, df: pd.DataFrame, config: TrainingConfig) -> Tuple[MyTradingEnv, MyTradingEnv]:
-        """Создает train и validation окружения"""
-        train_df, val_df = self._create_validation_split(df, val_ratio=0.2)
+    def _create_env(self, df: pd.DataFrame, config: TrainingConfig) -> MyTradingEnv:
+        env_kwargs = {
+            "initial_balance": config.initial_balance,
+            "window_size": config.window_size,
+            "commission": config.commission,
+            "slippage": config.slippage,
+            "max_holding_time": config.max_holding_time,
+            "max_drawdown_threshold": config.max_drawdown_threshold,
+            "max_steps": config.max_steps,
+        }
         
-        train_env = MyTradingEnv(
-            df=train_df.copy(),
-            initial_balance=config.initial_balance,
-            window_size=config.window_size,
-            commission=config.commission,
-            slippage=config.slippage,
-            max_holding_time=config.max_holding_time,
-            holding_threshold=config.holding_threshold,
-            max_drawdown_threshold=config.max_drawdown_threshold,
-            lambda_drawdown=config.lambda_drawdown,
-            lambda_hold=config.lambda_hold,
-            reward_scaling=config.reward_scaling,
-            max_steps=config.max_steps,
-        )
+        if config.extra_params:
+            env_kwargs.update(config.extra_params)
         
-        val_env = MyTradingEnv(
-            df=val_df.copy(),
-            initial_balance=config.initial_balance,
-            window_size=config.window_size,
-            commission=config.commission,
-            slippage=config.slippage,
-            max_holding_time=config.max_holding_time,
-            holding_threshold=config.holding_threshold,
-            max_drawdown_threshold=config.max_drawdown_threshold,
-            lambda_drawdown=config.lambda_drawdown,
-            lambda_hold=config.lambda_hold,
-            reward_scaling=config.reward_scaling,
-            max_steps=config.max_steps,
-        )
+        env = MyTradingEnv(df=df.copy(), **env_kwargs)
         
-        return train_env, val_env
+        return env
 
     def _evaluate_agent(self, agent, env: MyTradingEnv, n_episodes: int = 5) -> Dict[str, Any]:
-        """Оценка агента на отдельном окружении"""
         rewards = []
         portfolio_values = []
         trade_counts = []
+        steps_list = []
+        
+        max_steps = self._current_config.max_steps if hasattr(self, '_current_config') and self._current_config else 1000
         
         for i in range(n_episodes):
-            state, _ = env.reset(seed=self.seed + i + 1000)  # Фиксированные seeds для оценки
+            state, _ = env.reset(seed=self.seed + i + 1000)
             done = False
             episode_reward = 0
+            steps = 0
             
-            while not done:
+            while not done and steps < max_steps:
                 action = agent.select_action(state, training=False)
-                state, reward, done, _, info = env.step(action)
+                next_state, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
                 episode_reward += reward
+                state = next_state
+                steps += 1
             
             rewards.append(episode_reward)
             portfolio_values.append(info.get("portfolio_value", env.initial_balance))
             trade_counts.append(info.get("n_trades", 0))
+            steps_list.append(steps)
         
         return {
             "mean_reward": float(np.mean(rewards)),
@@ -96,26 +78,50 @@ class TrainingManager:
             "max_reward": float(np.max(rewards)),
             "mean_portfolio": float(np.mean(portfolio_values)),
             "mean_trades": float(np.mean(trade_counts)),
+            "mean_steps": float(np.mean(steps_list)),
         }
 
     def _print_progress(self, episode: int, total_episodes: int, episode_reward: float,
                        agent, val_results: Dict[str, Any], env_metrics: Dict[str, Any]):
-        """Печать прогресса обучения"""
-        # Средняя награда за последние 100 эпизодов
         if len(agent.episode_rewards) >= 100:
             avg_reward = np.mean(agent.episode_rewards[-100:])
         else:
             avg_reward = episode_reward
         
-        print(f"Ep {episode+1:5d}/{total_episodes} | "
-              f"Train R: {episode_reward:7.2f} | "
-              f"Avg100 R: {avg_reward:7.2f} | "
-              f"Val R: {val_results['mean_reward']:7.2f} ± {val_results['std_reward']:5.2f} | "
-              f"Val Portf: ${val_results['mean_portfolio']:8.2f} | "
-              f"Eps: {agent.epsilon:6.4f} | "
-              f"LR: {getattr(agent, 'learning_rate', 0.1):6.4f} | "
-              f"States: {len(agent.q_table):6d} | "
-              f"Trades: {env_metrics.get('total_trades', 0):3d}")
+        win_rate = env_metrics.get('win_rate', 0)
+        profit_factor = env_metrics.get('profit_factor', 0)
+        total_trades = env_metrics.get('total_trades', 0)
+        avg_pnl = env_metrics.get('avg_pnl', 0)
+        total_pnl = env_metrics.get('total_pnl', 0)
+        
+        reward_str = f"{episode_reward:+7.2f}"
+        avg_reward_str = f"{avg_reward:+7.2f}"
+        val_reward_str = f"{val_results['mean_reward']:+7.2f}"
+        
+        portfolio_change = val_results['mean_portfolio'] - self._current_config.initial_balance
+        portfolio_change_pct = (portfolio_change / self._current_config.initial_balance) * 100
+        portfolio_str = f"${val_results['mean_portfolio']:,.2f}"
+        portfolio_change_str = f"{portfolio_change_pct:+.2f}%"
+        
+        progress_pct = ((episode + 1) / total_episodes) * 100
+        bar_length = 30
+        filled = int(bar_length * (episode + 1) / total_episodes)
+        bar = "█" * filled + "░" * (bar_length - filled)
+        
+        print(f"\n{'='*100}")
+        print(f"Эпизод {episode+1:5d}/{total_episodes} [{progress_pct:5.1f}%] |{bar}|")
+        print(f"{'-'*100}")
+        print(f"📊 НАГРАДЫ:")
+        print(f"   Текущая:     {reward_str:>10} | Средняя (100): {avg_reward_str:>10} | Eval: {val_reward_str:>10} ± {val_results['std_reward']:5.2f}")
+        print(f"💰 ПОРТФЕЛЬ:")
+        print(f"   Значение:    {portfolio_str:>10} | Изменение:     {portfolio_change_str:>10}")
+        print(f"📈 ТОРГОВЛЯ:")
+        print(f"   Сделок:      {total_trades:>10} | Win Rate:      {win_rate:>6.1f}% | Profit Factor: {profit_factor:>6.2f}")
+        if total_trades > 0:
+            print(f"   Avg PnL:      ${avg_pnl:>9.2f} | Total PnL:     ${total_pnl:>9.2f}")
+        print(f"⚙️  ПАРАМЕТРЫ:")
+        print(f"   Epsilon:      {agent.epsilon:>10.4f} | Learning Rate: {getattr(agent, 'learning_rate', 0.1):>10.4f} | States: {len(agent.q_table):>6d}")
+        print(f"{'='*100}")
 
     def train_agent(
         self,
@@ -125,8 +131,6 @@ class TrainingManager:
         experiment_name: Optional[str] = None,
         verbose: bool = True,
     ) -> Dict[str, Any]:
-        """Основной метод обучения агента"""
-        
         if experiment_name is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             experiment_name = f"{config.agent_name}_{timestamp}"
@@ -135,60 +139,61 @@ class TrainingManager:
         checkpoint_dir = self.base_checkpoint_dir / experiment_name
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         
-        # Сохраняем конфиг
         with open(logger.log_dir / "config.json", "w") as f:
             json.dump(asdict(config), f, indent=2)
         
         if verbose:
-            print(f"\n{'='*80}")
-            print(f"Начало обучения: {config.agent_name}")
-            print(f"Эксперимент: {experiment_name}")
-            print(f"Эпизодов: {config.n_episodes}")
-            print(f"Max steps: {config.max_steps}")
-            print(f"Learning rate: {config.learning_rate}")
-            print(f"Discount factor: {config.discount_factor}")
-            print(f"Epsilon: {config.epsilon_start}->{config.epsilon_end}")
-            print(f"{'='*80}\n")
+            print(f"\n{'='*100}")
+            print(f"🚀 НАЧАЛО ОБУЧЕНИЯ")
+            print(f"{'='*100}")
+            print(f"Агент:          {config.agent_name}")
+            print(f"Эксперимент:    {experiment_name}")
+            print(f"Эпизодов:       {config.n_episodes}")
+            print(f"Max steps:       {config.max_steps}")
+            print(f"Learning rate:  {config.learning_rate}")
+            print(f"Discount:       {config.discount_factor}")
+            print(f"Epsilon:        {config.epsilon_start} → {config.epsilon_end}")
+            print(f"Eval frequency: {config.eval_frequency}")
+            print(f"Patience:       {config.patience}")
+            print(f"Initial balance: ${config.initial_balance:,.2f}")
+            print(f"{'='*100}\n")
         
-        # Создаем окружения
-        train_env, val_env = self._create_envs(df, config)
+        env = self._create_env(df, config)
         
-        # Метрики для мониторинга
+        self._current_config = config
+        
         best_val_reward = -float('inf')
         patience_counter = 0
         start_time = time.time()
         
-        # Основной цикл обучения
         for episode in range(config.n_episodes_start, config.n_episodes):
-            # 1. ОБУЧЕНИЕ НА TRAIN ДАННЫХ
-            state, info = train_env.reset(seed=self.seed + episode)
+            state, info = env.reset(seed=self.seed + episode)
             done = False
             episode_reward = 0
             steps = 0
             
-            # Для SARSA и Monte Carlo нужна специальная обработка
             if hasattr(agent, 'reset_eligibility_traces'):
                 agent.reset_eligibility_traces()
             
             if hasattr(agent, '_start_new_episode'):
                 agent._start_new_episode()
             
+            if hasattr(agent, 'episode_transitions'):
+                agent.episode_transitions.clear()
+            
             action = agent.select_action(state, training=True)
             
             while not done and steps < config.max_steps:
-                next_state, reward, terminated, truncated, info = train_env.step(action)
+                next_state, reward, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
                 
-                # Правильная обработка next_action для разных алгоритмов
                 if not done:
                     next_action = agent.select_action(next_state, training=True)
                 else:
                     next_action = None
                 
-                # Обновление агента
                 agent.update(state, action, reward, next_state, done, next_action)
                 
-                # Переход к следующему шагу
                 state = next_state
                 if next_action is not None:
                     action = next_action
@@ -198,28 +203,26 @@ class TrainingManager:
                 episode_reward += reward
                 steps += 1
             
-            # Завершение эпизода для Monte Carlo
             if hasattr(agent, '_end_episode'):
                 agent._end_episode()
             
-            # 2. ОБНОВЛЕНИЕ МЕТРИК АГЕНТА
+            if hasattr(agent, 'episode_transitions') and done:
+                if agent.episode_transitions:
+                    pass
+            
             agent.episode_count += 1
             agent.episode_rewards.append(episode_reward)
             agent.episode_lens.append(steps)
             
-            # Decay epsilon
             if hasattr(agent, 'decay_epsilon'):
                 agent.decay_epsilon()
             
-            # Decay learning rate
             if hasattr(agent, 'decay_learning_rate'):
                 agent.decay_learning_rate()
             
-            # 3. СОБИРАЕМ МЕТРИКИ ОКРУЖЕНИЯ
-            env_metrics = train_env.get_metrics()
-            portfolio_value = info.get("portfolio_value", train_env.portfolio_value)
+            env_metrics = env.get_metrics()
+            portfolio_value = info.get("portfolio_value", env.portfolio_value)
             
-            # Создаем объект метрик эпизода
             episode_metrics = EpisodeMetrics(
                 episode=episode + 1,
                 reward=float(episode_reward),
@@ -233,71 +236,78 @@ class TrainingManager:
                 timestamp=time.time(),
             )
             
-            # Логируем эпизод
             logger.log_episode(episode_metrics)
             
-            # 4. ВАЛИДАЦИЯ КАЖДЫЕ eval_frequency ЭПИЗОДОВ
             if (episode + 1) % config.eval_frequency == 0:
-                val_results = self._evaluate_agent(agent, val_env, n_episodes=3)
+                val_results = self._evaluate_agent(agent, env, n_episodes=5)
                 logger.log_evaluation(episode + 1, val_results)
                 
-                # Проверяем улучшение
-                if val_results['mean_reward'] > best_val_reward:
-                    best_val_reward = val_results['mean_reward']
+                val_score = val_results['mean_reward'] + 0.001 * (val_results['mean_portfolio'] - config.initial_balance)
+                
+                if val_score > best_val_reward:
+                    best_val_reward = val_score
                     patience_counter = 0
-                    # Сохраняем лучшую модель
                     agent.save(str(checkpoint_dir / "best_agent.pkl"))
                     if verbose:
-                        print(f"✓ Новая лучшая модель! Val reward: {best_val_reward:.2f}")
+                        portfolio_change = val_results['mean_portfolio'] - config.initial_balance
+                        portfolio_change_pct = (portfolio_change / config.initial_balance) * 100
+                        print(f"\n{'='*100}")
+                        print(f"✅ НОВАЯ ЛУЧШАЯ МОДЕЛЬ!")
+                        print(f"   Eval Reward: {val_results['mean_reward']:+.2f}")
+                        print(f"   Portfolio: ${val_results['mean_portfolio']:,.2f} ({portfolio_change_pct:+.2f}%)")
+                        print(f"{'='*100}")
                 else:
                     patience_counter += 1
                 
-                # Печать прогресса
                 if verbose:
                     self._print_progress(episode, config.n_episodes, episode_reward, 
                                         agent, val_results, env_metrics)
             
-            # 5. СОХРАНЕНИЕ ЧЕКПОЙНТОВ
             if (episode + 1) % config.save_frequency == 0:
                 checkpoint_path = checkpoint_dir / f"checkpoint_ep{episode+1}.pkl"
                 agent.save(str(checkpoint_path))
                 logger.log_checkpoint(episode + 1, str(checkpoint_path))
             
-            # 6. РАННЯЯ ОСТАНОВКА
             if patience_counter >= config.patience:
                 if verbose:
-                    print(f"\n⚠️  Ранняя остановка на эпизоде {episode + 1}")
-                    print(f"   Эпизодов без улучшений: {patience_counter}")
+                    print(f"\n{'='*100}")
+                    print(f"⚠️  РАННЯЯ ОСТАНОВКА")
+                    print(f"   Эпизод: {episode + 1}")
+                    print(f"   Эпизодов без улучшений: {patience_counter}/{config.patience}")
+                    print(f"{'='*100}")
                 break
         
-        # 7. ФИНАЛИЗАЦИЯ ОБУЧЕНИЯ
         training_time = time.time() - start_time
         
-        # Сохраняем финальную модель
         final_path = checkpoint_dir / "final_agent.pkl"
         agent.save(str(final_path))
         logger.log_checkpoint(config.n_episodes, str(final_path))
         
-        # Сохраняем итоговый отчет
         logger.save_summary(config, training_time, best_val_reward)
         
         if verbose:
-            print(f"\n{'='*80}")
-            print(f"ОБУЧЕНИЕ ЗАВЕРШЕНО!")
-            print(f"{'='*80}")
-            print(f"Всего эпизодов: {agent.episode_count}")
-            print(f"Время обучения: {training_time/60:.2f} минут")
-            print(f"Лучшая валидационная награда: {best_val_reward:.2f}")
-            print(f"Размер Q-таблицы: {len(agent.q_table)} состояний")
-            print(f"Финальный epsilon: {getattr(agent, 'epsilon', 0.0):.4f}")
+            final_eval = self._evaluate_agent(agent, env, n_episodes=10)
+            final_portfolio_change = final_eval['mean_portfolio'] - config.initial_balance
+            final_portfolio_change_pct = (final_portfolio_change / config.initial_balance) * 100
             
-            # Оценка на validation данных
-            final_eval = self._evaluate_agent(agent, val_env, n_episodes=10)
-            print(f"\nФинальная оценка на validation:")
-            print(f"  Средняя награда: {final_eval['mean_reward']:.2f}")
-            print(f"  Средний портфель: ${final_eval['mean_portfolio']:.2f}")
-            print(f"  Среднее количество сделок: {final_eval['mean_trades']:.1f}")
-            print(f"{'='*80}\n")
+            print(f"\n{'='*100}")
+            print(f"✅ ОБУЧЕНИЕ ЗАВЕРШЕНО!")
+            print(f"{'='*100}")
+            print(f"📊 СТАТИСТИКА ОБУЧЕНИЯ:")
+            print(f"   Всего эпизодов:     {agent.episode_count:>10}")
+            print(f"   Время обучения:      {training_time/60:>10.2f} минут")
+            print(f"   Лучшая eval награда: {best_val_reward:>10.2f}")
+            print(f"   Размер Q-таблицы:   {len(agent.q_table):>10} состояний")
+            print(f"   Финальный epsilon:  {getattr(agent, 'epsilon', 0.0):>10.4f}")
+            print(f"\n📈 ФИНАЛЬНАЯ ОЦЕНКА:")
+            print(f"   Средняя награда:     {final_eval['mean_reward']:>+10.2f}")
+            print(f"   Средний портфель:    ${final_eval['mean_portfolio']:>9,.2f} ({final_portfolio_change_pct:+.2f}%)")
+            print(f"   Количество сделок:   {final_eval['mean_trades']:>10.1f}")
+            print(f"   Средние шаги:        {final_eval['mean_steps']:>10.1f}")
+            print(f"\n💾 СОХРАНЕНО:")
+            print(f"   Логи:                {logger.log_dir}")
+            print(f"   Чекпойнты:           {checkpoint_dir}")
+            print(f"{'='*100}\n")
         
         return {
             "experiment_name": experiment_name,
@@ -320,7 +330,6 @@ class TrainingManager:
         experiment_name: Optional[str] = None,
         verbose: bool = True,
     ):
-        """Продолжение обучения с загруженного чекпойнта"""
         if verbose:
             print(f"\nЗагрузка агента из {checkpoint_path}")
         agent.load(checkpoint_path)

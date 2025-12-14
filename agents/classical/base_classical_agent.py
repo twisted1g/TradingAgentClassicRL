@@ -11,20 +11,15 @@ class BaseClassicalAgent(ABC):
         self,
         n_actions: int = 3,
         learning_rate: float = 0.1,
-        discount_factor: float = 0.99,
+        discount_factor: float = 0.95,
         epsilon_start: float = 1.0,
         epsilon_end: float = 0.01,
-        epsilon_decay: float = 0.995,
-        lr_decay: float = 0.9999,
-        min_learning_rate: float = 0.001,
+        epsilon_decay: float = 0.9998,
         name: str = "BaseClassicalAgent",
-        exploration_strategy: str = "epsilon_greedy",
     ):
         self.n_actions = n_actions
+
         self.learning_rate = learning_rate
-        self.initial_learning_rate = learning_rate
-        self.lr_decay = lr_decay
-        self.min_learning_rate = min_learning_rate
         self.discount_factor = discount_factor
 
         self.epsilon = epsilon_start
@@ -33,19 +28,14 @@ class BaseClassicalAgent(ABC):
         self.epsilon_decay = epsilon_decay
 
         self.name = name
-        self.exploration_strategy = exploration_strategy
-        self.temperature = 1.0
 
-        self.q_table = defaultdict(lambda: np.zeros(self.n_actions))
-        self.state_visit_count = defaultdict(int)
-        self.state_action_visit_count = defaultdict(lambda: np.zeros(self.n_actions))
+        self.q_table = defaultdict(lambda: np.zeros(self.n_actions, dtype=np.float32))
 
         self.episode_count = 0
         self.total_steps = 0
         self.episode_rewards = []
         self.episode_lens = []
-        self.q_value_history = []
-        self.learning_rate_history = []
+        self.td_error_history = []
 
     def state_to_key(self, state: np.ndarray) -> tuple:
         return tuple(state.astype(int))
@@ -59,58 +49,23 @@ class BaseClassicalAgent(ABC):
     def get_best_action(self, state: np.ndarray) -> int:
         state_key = self.state_to_key(state)
         q_values = self.q_table[state_key]
-
-        if self.exploration_strategy == "ucb":
-            counts = self.state_action_visit_count[state_key]
-            ucb = q_values + np.sqrt(
-                2.0 * np.log(self.total_steps + 1) / (counts + 1e-6)
-            )
-            return int(np.argmax(ucb))
-
         max_q = np.max(q_values)
         best_actions = np.where(q_values == max_q)[0]
         return int(np.random.choice(best_actions))
 
     def select_action(self, state: np.ndarray, training: bool = True) -> int:
-        state_key = self.state_to_key(state)
-        self.state_visit_count[state_key] += 1
-
         if not training:
-            action = self.get_best_action(state)
-            self.state_action_visit_count[state_key][action] += 1
-            return action
+            return self.get_best_action(state)
 
-        if self.exploration_strategy == "epsilon_greedy":
-            if np.random.rand() < self.epsilon:
-                action = np.random.randint(self.n_actions)
-            else:
-                action = self.get_best_action(state)
-
-        elif self.exploration_strategy == "boltzmann":
-            q = self.q_table[state_key]
-            exp_q = np.exp(q / (self.temperature + 1e-6))
-            probs = exp_q / np.sum(exp_q)
-            action = int(np.random.choice(self.n_actions, p=probs))
-
+        if np.random.rand() < self.epsilon:
+            action = np.random.randint(self.n_actions)
         else:
             action = self.get_best_action(state)
 
-        self.state_action_visit_count[state_key][action] += 1
         return action
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
-
-    def decay_learning_rate(self):
-        self.learning_rate = max(
-            self.min_learning_rate,
-            self.learning_rate * self.lr_decay,
-        )
-        self.learning_rate_history.append(self.learning_rate)
-
-    def decay_temperature(self):
-        if self.exploration_strategy == "boltzmann":
-            self.temperature = max(0.1, self.temperature * 0.999)
 
     @abstractmethod
     def update(
@@ -124,13 +79,6 @@ class BaseClassicalAgent(ABC):
     ):
         pass
 
-    def update_adaptive_learning_rate(self, td_error: float):
-        if abs(td_error) > 1.0:
-            self.learning_rate = min(0.5, self.learning_rate * 1.01)
-        elif abs(td_error) < 0.01:
-            self.learning_rate = max(
-                self.min_learning_rate, self.learning_rate * 0.99
-            )
 
     def train_episode(
         self,
@@ -172,12 +120,6 @@ class BaseClassicalAgent(ABC):
             self.episode_rewards.append(float(episode_reward))
             self.episode_lens.append(int(steps))
             self.decay_epsilon()
-            self.decay_learning_rate()
-            self.decay_temperature()
-
-        if self.q_table:
-            avg_q = np.mean([np.max(v) for v in self.q_table.values()])
-            self.q_value_history.append(float(avg_q))
 
         return {
             "episode": self.episode_count if training else 0,
@@ -219,7 +161,7 @@ class BaseClassicalAgent(ABC):
 
     def save(self, path: str):
         try:
-            with open(path, 'wb') as f:
+            with open(path, "wb") as f:
                 pickle.dump(self, f)
         except Exception as e:
             raise IOError(f"Error saving agent to {path}: {e}")
@@ -227,46 +169,36 @@ class BaseClassicalAgent(ABC):
     @classmethod
     def load(cls, path: str):
         try:
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 agent = pickle.load(f)
             return agent
         except Exception as e:
             raise IOError(f"Error loading agent from {path}: {e}")
-        
+
     def __getstate__(self):
-        # Копируем словарь объекта
         state = self.__dict__.copy()
-        # Преобразуем defaultdict в обычный dict
-        state['q_table'] = dict(state['q_table'])
-        state['state_visit_count'] = dict(state['state_visit_count'])
-        state['state_action_visit_count'] = dict(state['state_action_visit_count'])
-        # Для SARSA(λ)
-        if 'eligibility_traces' in state:
-            state['eligibility_traces'] = dict(state['eligibility_traces'])
-        if 'returns_count' in state:
-            state['returns_count'] = dict(state['returns_count'])
+        state["q_table"] = dict(state["q_table"])
+        if "eligibility_traces" in state:
+            state["eligibility_traces"] = dict(state["eligibility_traces"])
+        if "returns_count" in state:
+            state["returns_count"] = dict(state["returns_count"])
         return state
 
     def __setstate__(self, state):
-        q_table = state['q_table']
-        state['q_table'] = defaultdict(lambda: np.zeros(state.get('n_actions', 3)))
-        state['q_table'].update(q_table)
+        q_table = state["q_table"]
+        state["q_table"] = defaultdict(lambda: np.zeros(state.get("n_actions", 3)))
+        state["q_table"].update(q_table)
 
-        state['state_visit_count'] = defaultdict(int)
-        state['state_visit_count'].update(state.get('state_visit_count', {}))
+        if "eligibility_traces" in state:
+            traces = state["eligibility_traces"]
+            state["eligibility_traces"] = defaultdict(
+                lambda: np.zeros(state.get("n_actions", 3))
+            )
+            state["eligibility_traces"].update(traces)
 
-        sa_visit = state.get('state_action_visit_count', {})
-        state['state_action_visit_count'] = defaultdict(lambda: np.zeros(state.get('n_actions', 3)))
-        state['state_action_visit_count'].update(sa_visit)
-
-        if 'eligibility_traces' in state:
-            traces = state['eligibility_traces']
-            state['eligibility_traces'] = defaultdict(lambda: np.zeros(state.get('n_actions', 3)))
-            state['eligibility_traces'].update(traces)
-
-        if 'returns_count' in state:
-            rc = state['returns_count']
-            state['returns_count'] = defaultdict(int)
-            state['returns_count'].update(rc)
+        if "returns_count" in state:
+            rc = state["returns_count"]
+            state["returns_count"] = defaultdict(int)
+            state["returns_count"].update(rc)
 
         self.__dict__.update(state)

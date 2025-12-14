@@ -4,6 +4,7 @@ from .base_classical_agent import BaseClassicalAgent
 
 
 class QLearningAgent(BaseClassicalAgent):
+
     def __init__(self, **kwargs):
         super().__init__(name="Q-Learning", **kwargs)
 
@@ -16,16 +17,17 @@ class QLearningAgent(BaseClassicalAgent):
         done: bool,
         next_action: Optional[int] = None,
     ):
-        current_q = self.get_q_value(state, action)
+        state_key = self.state_to_key(state)
+        current_q = self.q_table[state_key][action]
 
         if done:
             target = reward
         else:
-            max_next_q = np.max(self.q_table[self.state_to_key(next_state)])
+            next_state_key = self.state_to_key(next_state)
+            max_next_q = np.max(self.q_table[next_state_key])
             target = reward + self.discount_factor * max_next_q
 
         td_error = target - current_q
-        new_q = current_q + self.learning_rate * td_error
-        self.set_q_value(state, action, new_q)
+        self.q_table[state_key][action] += self.learning_rate * td_error
 
-        self.update_adaptive_learning_rate(td_error)
+        self.td_error_history.append(td_error)
