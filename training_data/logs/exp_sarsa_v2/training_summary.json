@@ -1,0 +1,84 @@
+{
+  "config": {
+    "agent_name": "SARSA_v2",
+    "agent_type": "SARSA",
+    "n_episodes": 3000,
+    "n_episodes_start": 0,
+    "max_steps": 1000,
+    "learning_rate": 0.1,
+    "discount_factor": 0.95,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.999,
+    "lr_decay": 0.9999,
+    "min_learning_rate": 0.001,
+    "initial_balance": 1000.0,
+    "window_size": 10,
+    "commission": 0.0001,
+    "slippage": 0.0001,
+    "max_holding_time": 48,
+    "holding_threshold": 12,
+    "max_drawdown_threshold": 0.05,
+    "lambda_drawdown": 0.5,
+    "lambda_hold": 0.1,
+    "reward_scaling": 1.0,
+    "eval_frequency": 100,
+    "save_frequency": 500,
+    "patience": 200,
+    "seed": 42,
+    "extra_params": {}
+  },
+  "training_time": 611.4122729301453,
+  "best_val_reward": 1242.63696146088,
+  "total_episodes": 3000,
+  "final_metrics": {
+    "episode": 3000,
+    "reward": 251.19977964970542,
+    "steps": 1000,
+    "epsilon": 0.01,
+    "portfolio_value": 873.088142801658,
+    "n_trades": 148,
+    "win_rate": 38.513513513513516,
+    "avg_pnl": -0.7691373171676782,
+    "max_drawdown": 0.054117116846312534,
+    "timestamp": 1765712738.6143758
+  },
+  "checkpoints": [
+    {
+      "episode": 500,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/checkpoint_ep500.pkl",
+      "timestamp": 1765712225.8826122
+    },
+    {
+      "episode": 1000,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/checkpoint_ep1000.pkl",
+      "timestamp": 1765712327.7361782
+    },
+    {
+      "episode": 1500,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/checkpoint_ep1500.pkl",
+      "timestamp": 1765712429.96991
+    },
+    {
+      "episode": 2000,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/checkpoint_ep2000.pkl",
+      "timestamp": 1765712532.928694
+    },
+    {
+      "episode": 2500,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/checkpoint_ep2500.pkl",
+      "timestamp": 1765712636.655884
+    },
+    {
+      "episode": 3000,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/checkpoint_ep3000.pkl",
+      "timestamp": 1765712739.4614487
+    },
+    {
+      "episode": 3000,
+      "path": "/mnt/d/Study/python/training_data/checkpoints/exp_sarsa_v2/final_agent.pkl",
+      "timestamp": 1765712739.4687827
+    }
+  ],
+  "timestamp": "2025-12-14T14:45:39.468867"
+}

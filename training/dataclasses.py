@@ -1,40 +1,55 @@
-from typing import Dict, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, field, asdict
+from typing import Dict, Any
+import time
 
 
 @dataclass
 class TrainingConfig:
-
-    agent_name: str
-    agent_type: str
-    n_episodes: int
-    max_steps: int
-
-    learning_rate: float
-    discount_factor: float
-    epsilon_start: float
-    epsilon_end: float
-    epsilon_decay: float
-
+    """Конфигурация для обучения агентов"""
+    # Параметры агента
+    agent_name: str = "QLearning"
+    agent_type: str = "QLearning"
+    n_episodes: int = 5000
     n_episodes_start: int = 0
-
-    lambda_param: Optional[float] = None
-    replace_traces: Optional[bool] = None
-
+    max_steps: int = 1000
+    learning_rate: float = 0.1
+    discount_factor: float = 0.95
+    epsilon_start: float = 1.0
+    epsilon_end: float = 0.01
+    epsilon_decay: float = 0.999
+    lr_decay: float = 0.9999  # NEW
+    min_learning_rate: float = 0.001  # NEW
+    
+    # Параметры среды
     initial_balance: float = 1000.0
+    window_size: int = 10
     commission: float = 0.0001
     slippage: float = 0.0005
-
-    eval_frequency: int = 100
-    save_frequency: int = 500
-
-    def to_dict(self) -> Dict:
-        return asdict(self)
+    max_holding_time: int = 60 * 24
+    holding_threshold: int = 24
+    max_drawdown_threshold: float = 0.05
+    lambda_drawdown: float = 0.25
+    lambda_hold: float = 0.05
+    reward_scaling: float = 1.0
+    
+    # Параметры обучения
+    eval_frequency: int = 200
+    save_frequency: int = 1000
+    patience: int = 10  # NEW: эпизодов для ранней остановки
+    seed: int = 42  # NEW: seed для воспроизводимости
+    
+    # Дополнительные параметры (для разных агентов)
+    extra_params: Dict[str, Any] = field(default_factory=dict)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            k: v for k, v in self.__dict__.items() 
+            if not k.startswith('_')
+        }
 
 
 @dataclass
 class EpisodeMetrics:
-
     episode: int
     reward: float
     steps: int
@@ -44,7 +59,8 @@ class EpisodeMetrics:
     win_rate: float
     avg_pnl: float
     max_drawdown: float
-    timestamp: float
+    timestamp: float = field(default_factory=time.time)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self):
         return asdict(self)
+

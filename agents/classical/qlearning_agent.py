@@ -21,9 +21,11 @@ class QLearningAgent(BaseClassicalAgent):
         if done:
             target = reward
         else:
-            next_state_key = self.state_to_key(next_state)
-            max_next_q = np.max(self.q_table[next_state_key])
+            max_next_q = np.max(self.q_table[self.state_to_key(next_state)])
             target = reward + self.discount_factor * max_next_q
 
-        new_q = current_q + self.learning_rate * (target - current_q)
+        td_error = target - current_q
+        new_q = current_q + self.learning_rate * td_error
         self.set_q_value(state, action, new_q)
+
+        self.update_adaptive_learning_rate(td_error)

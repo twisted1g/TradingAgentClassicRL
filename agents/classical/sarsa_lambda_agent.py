@@ -1,11 +1,11 @@
 from typing import Dict, Optional
 import numpy as np
-import pickle
 from collections import defaultdict
 from .base_classical_agent import BaseClassicalAgent
 
 
 class SarsaLambdaAgent(BaseClassicalAgent):
+    
     def __init__(
         self,
         lambda_param: float = 0.6,
@@ -32,13 +32,16 @@ class SarsaLambdaAgent(BaseClassicalAgent):
             self.eligibility_traces[state_key][action] += 1.0
 
     def decay_eligibility_traces(self):
-        decay_factor = self.lambda_param * self.discount_factor
+        decay = self.discount_factor * self.lambda_param
+        to_delete = []
 
-        for state_key in list(self.eligibility_traces.keys()):
-            self.eligibility_traces[state_key] *= decay_factor
+        for state_key, traces in self.eligibility_traces.items():
+            traces *= decay
+            if np.max(np.abs(traces)) < 1e-6:
+                to_delete.append(state_key)
 
-            if np.max(np.abs(self.eligibility_traces[state_key])) < 1e-6:
-                del self.eligibility_traces[state_key]
+        for k in to_delete:
+            del self.eligibility_traces[k]
 
     def update(
         self,
@@ -49,34 +52,38 @@ class SarsaLambdaAgent(BaseClassicalAgent):
         done: bool,
         next_action: Optional[int] = None,
     ):
-        if next_action is None:
-            next_action = self.select_action(next_state, training=True)
+        # SARSA — строго on-policy
+        if not done and next_action is None:
+            raise ValueError("SARSA requires next_action for non-terminal states")
 
         current_q = self.get_q_value(state, action)
 
         if done:
             target = reward
         else:
-            next_q = self.get_q_value(next_state, next_action)
-            target = reward + self.discount_factor * next_q
+            target = reward + self.discount_factor * self.get_q_value(
+                next_state, next_action
+            )
 
         td_error = target - current_q
 
+        # 1️⃣ обновляем eligibility trace
         self.update_eligibility_traces(state, action)
 
+        # 2️⃣ обновляем все Q по traces
         for state_key, traces in self.eligibility_traces.items():
-            state_array = np.array(state_key)
-            for action_idx in range(self.n_actions):
-                if traces[action_idx] != 0:
-                    current_q_val = self.get_q_value(state_array, action_idx)
+            for a in range(self.n_actions):
+                if traces[a] == 0.0:
+                    continue
 
-                    new_q = (
-                        current_q_val
-                        + self.learning_rate * td_error * traces[action_idx]
-                    )
-                    self.set_q_value(state_array, action_idx, new_q)
+                q = self.q_table[state_key][a]
+                self.q_table[state_key][a] = q + self.learning_rate * td_error * traces[a]
 
+        # 3️⃣ decay traces
         self.decay_eligibility_traces()
+
+        # 4️⃣ адаптивный LR
+        self.update_adaptive_learning_rate(td_error)
 
         if done:
             self.reset_eligibility_traces()
@@ -84,14 +91,15 @@ class SarsaLambdaAgent(BaseClassicalAgent):
     def train_episode(
         self, env, max_steps: int = 1000, verbose: bool = False
     ) -> Dict[str, float]:
+
         self.reset_eligibility_traces()
 
         state, info = env.reset()
-        done = False
-        episode_reward = 0
-        steps = 0
-
         action = self.select_action(state, training=True)
+
+        done = False
+        episode_reward = 0.0
+        steps = 0
 
         while not done and steps < max_steps:
             next_state, reward, terminated, truncated, info = env.step(action)
@@ -100,77 +108,38 @@ class SarsaLambdaAgent(BaseClassicalAgent):
             if not done:
                 next_action = self.select_action(next_state, training=True)
             else:
-                next_action = 0
+                next_action = None
 
             self.update(state, action, reward, next_state, done, next_action)
 
-            state = next_state
-            action = next_action
             episode_reward += reward
             steps += 1
             self.total_steps += 1
 
+            state = next_state
+            action = next_action
+
         self.episode_count += 1
-        self.episode_rewards.append(episode_reward)
-        self.episode_lens.append(steps)
+        self.episode_rewards.append(float(episode_reward))
+        self.episode_lens.append(int(steps))
         self.decay_epsilon()
 
-        if len(self.q_table) > 0:
-            avg_q = np.mean([np.max(q_vals) for q_vals in self.q_table.values()])
-            self.q_value_history.append(avg_q)
+        if self.q_table:
+            avg_q = np.mean([np.max(v) for v in self.q_table.values()])
+            self.q_value_history.append(float(avg_q))
 
         if verbose and self.episode_count % 100 == 0:
-            avg_reward = np.mean(self.episode_rewards[-100:])
             print(
-                f"Episode {self.episode_count}: "
-                f"Reward={episode_reward:.2f}, "
-                f"Avg100={avg_reward:.2f}, "
-                f"Epsilon={self.epsilon:.3f}, "
-                f"Q-table size={len(self.q_table)}, "
-                f"Traces size={len(self.eligibility_traces)}"
+                f"Episode {self.episode_count} | "
+                f"Reward={episode_reward:.2f} | "
+                f"Epsilon={self.epsilon:.3f} | "
+                f"LR={self.learning_rate:.4f} | "
+                f"Traces={len(self.eligibility_traces)}"
             )
 
         return {
             "episode": self.episode_count,
-            "reward": episode_reward,
-            "steps": steps,
-            "epsilon": self.epsilon,
+            "reward": float(episode_reward),
+            "steps": int(steps),
+            "epsilon": float(self.epsilon),
         }
-
-    def save(self, filepath: str):
-        data = {
-            "name": self.name,
-            "q_table": dict(self.q_table),
-            "n_actions": self.n_actions,
-            "learning_rate": self.learning_rate,
-            "discount_factor": self.discount_factor,
-            "epsilon": self.epsilon,
-            "episode_count": self.episode_count,
-            "episode_rewards": self.episode_rewards,
-            "lambda_param": self.lambda_param,
-            "replace_traces": self.replace_traces,
-        }
-        with open(filepath, "wb") as f:
-            pickle.dump(data, f)
-        print(f"SARSA(λ) агент сохранён: {filepath}")
-
-    def load(self, filepath: str):
-        with open(filepath, "rb") as f:
-            data = pickle.load(f)
-
-        self.name = data["name"]
-        self.q_table = defaultdict(
-            lambda: np.zeros(self.n_actions),
-            {k: np.array(v) for k, v in data["q_table"].items()},
-        )
-        self.learning_rate = data["learning_rate"]
-        self.discount_factor = data["discount_factor"]
-        self.epsilon = data["epsilon"]
-        self.episode_count = data["episode_count"]
-        self.episode_rewards = data["episode_rewards"]
-        self.lambda_param = data.get("lambda_param", 0.9)
-        self.replace_traces = data.get("replace_traces", True)
-
-        self.reset_eligibility_traces()
-
-        print(f"SARSA(λ) агент загружен: {filepath}")
