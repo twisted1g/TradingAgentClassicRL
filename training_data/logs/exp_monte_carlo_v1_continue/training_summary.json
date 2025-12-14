@@ -1,0 +1,68 @@
+{
+  "config": {
+    "agent_name": "Monte_Carlo_v1_continue",
+    "agent_type": "Monte_Carlo",
+    "n_episodes": 15000,
+    "max_steps": 1000,
+    "learning_rate": 0.05,
+    "discount_factor": 0.9,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.05,
+    "epsilon_decay": 0.9995,
+    "n_episodes_start": 10000,
+    "lambda_param": null,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 200,
+    "save_frequency": 1000
+  },
+  "training_time": 973.3683204650879,
+  "total_episodes": 5000,
+  "final_metrics": {
+    "episode": 15000,
+    "reward": 17.94486588559584,
+    "steps": 1000,
+    "epsilon": 0.01,
+    "portfolio_value": 1098.4386173182706,
+    "n_trades": 150,
+    "win_rate": 47.333333333333336,
+    "avg_pnl": 0.5607031489850668,
+    "max_drawdown": 0.06065169922475122,
+    "timestamp": 1765655970.608396
+  },
+  "checkpoints": [
+    {
+      "episode": 11000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1_continue/continue_ep11000.pkl",
+      "timestamp": 1765655193.05557
+    },
+    {
+      "episode": 12000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1_continue/continue_ep12000.pkl",
+      "timestamp": 1765655398.2632127
+    },
+    {
+      "episode": 13000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1_continue/continue_ep13000.pkl",
+      "timestamp": 1765655589.758539
+    },
+    {
+      "episode": 14000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1_continue/continue_ep14000.pkl",
+      "timestamp": 1765655780.1560442
+    },
+    {
+      "episode": 15000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1_continue/continue_ep15000.pkl",
+      "timestamp": 1765655972.3318963
+    },
+    {
+      "episode": 15000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1_continue/final_continue_agent.pkl",
+      "timestamp": 1765655972.3506107
+    }
+  ],
+  "timestamp": "2025-12-13T22:59:32.350682"
+}

@@ -1,0 +1,68 @@
+{
+  "config": {
+    "agent_name": "SARSA_Lambda_v1_continue",
+    "agent_type": "SARSA_Lambda",
+    "n_episodes": 15000,
+    "max_steps": 1000,
+    "learning_rate": 0.05,
+    "discount_factor": 0.9,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.05,
+    "epsilon_decay": 0.9995,
+    "n_episodes_start": 10000,
+    "lambda_param": 0.8,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 200,
+    "save_frequency": 1000
+  },
+  "training_time": 1456.1889798641205,
+  "total_episodes": 5000,
+  "final_metrics": {
+    "episode": 15000,
+    "reward": 15.33888173196969,
+    "steps": 1000,
+    "epsilon": 0.01,
+    "portfolio_value": 1149.5561457423096,
+    "n_trades": 5,
+    "win_rate": 80.0,
+    "avg_pnl": 30.019729789496843,
+    "max_drawdown": 0.005288792943351009,
+    "timestamp": 1765658506.6167836
+  },
+  "checkpoints": [
+    {
+      "episode": 11000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_lambda_v1_continue/continue_ep11000.pkl",
+      "timestamp": 1765657363.8760839
+    },
+    {
+      "episode": 12000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_lambda_v1_continue/continue_ep12000.pkl",
+      "timestamp": 1765657666.1517813
+    },
+    {
+      "episode": 13000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_lambda_v1_continue/continue_ep13000.pkl",
+      "timestamp": 1765657964.2856386
+    },
+    {
+      "episode": 14000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_lambda_v1_continue/continue_ep14000.pkl",
+      "timestamp": 1765658236.3786507
+    },
+    {
+      "episode": 15000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_lambda_v1_continue/continue_ep15000.pkl",
+      "timestamp": 1765658508.2506623
+    },
+    {
+      "episode": 15000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_sarsa_lambda_v1_continue/final_continue_agent.pkl",
+      "timestamp": 1765658508.256472
+    }
+  ],
+  "timestamp": "2025-12-13T23:41:48.256580"
+}

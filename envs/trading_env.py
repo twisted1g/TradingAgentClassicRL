@@ -150,27 +150,24 @@ class MyTradingEnv(Env):
 
     def _calculate_reward(self, prev_portfolio_value: float) -> float:
         if self.last_exit_reason is None:
-            return 0.0
+            unrealized_pnl = self.position_value - (self.units * self.entry_price) if self.position == 1 else 0
+            position_pnl_pct = unrealized_pnl / (self.initial_balance + 1e-8)
+            return float(np.clip(position_pnl_pct * 10, -0.1, 0.1))
 
         trade = self.trade_history[-1]
         pnl = trade["pnl"]
-        entry_price = trade["entry_price"]
-        if entry_price == 0:
-            return 0.0
-
-        pnl_pct = pnl / entry_price
+        
+        pnl_pct = pnl / self.initial_balance  
 
         dd = trade["max_drawdown"]
         dd_penalty = self.lambda_drawdown * dd
 
         hold = trade["holding_time"]
         extra_hold = max(hold - self.holding_threshold, 0)
-        hold_penalty = self.lambda_hold * np.log1p(extra_hold)
+        hold_penalty = self.lambda_hold * extra_hold
 
-        reward = pnl_pct - dd_penalty - hold_penalty
-        reward = float(np.clip(reward * self.reward_scaling, -10, +10))
-
-        return reward
+        reward = (pnl_pct * 100) - dd_penalty - hold_penalty
+        return float(np.clip(reward * self.reward_scaling, -1.0, 1.0))
 
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:

@@ -1,0 +1,68 @@
+{
+  "config": {
+    "agent_name": "Monte_Carlo_v1",
+    "agent_type": "Monte_Carlo",
+    "n_episodes": 5000,
+    "max_steps": 1000,
+    "learning_rate": 0.05,
+    "discount_factor": 0.9,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.01,
+    "epsilon_decay": 0.9998,
+    "n_episodes_start": 0,
+    "lambda_param": null,
+    "replace_traces": null,
+    "initial_balance": 1000.0,
+    "commission": 0.0001,
+    "slippage": 0.0005,
+    "eval_frequency": 200,
+    "save_frequency": 1000
+  },
+  "training_time": 966.5142681598663,
+  "total_episodes": 5000,
+  "final_metrics": {
+    "episode": 5000,
+    "reward": 3.2978887040680145,
+    "steps": 1000,
+    "epsilon": 0.01,
+    "portfolio_value": 837.5119369401758,
+    "n_trades": 157,
+    "win_rate": 50.955414012738856,
+    "avg_pnl": -0.9466160502965503,
+    "max_drawdown": 0.07411098834550307,
+    "timestamp": 1765541555.2681954
+  },
+  "checkpoints": [
+    {
+      "episode": 1000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/checkpoint_ep1000.pkl",
+      "timestamp": 1765540778.0058036
+    },
+    {
+      "episode": 2000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/checkpoint_ep2000.pkl",
+      "timestamp": 1765540974.700997
+    },
+    {
+      "episode": 3000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/checkpoint_ep3000.pkl",
+      "timestamp": 1765541167.3649104
+    },
+    {
+      "episode": 4000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/checkpoint_ep4000.pkl",
+      "timestamp": 1765541363.934391
+    },
+    {
+      "episode": 5000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/checkpoint_ep5000.pkl",
+      "timestamp": 1765541556.9718847
+    },
+    {
+      "episode": 5000,
+      "path": "/mnt/d/Study/python/TradingAgentClassicRL/training_data/checkpoints/exp_monte_carlo_v1/final_agent.pkl",
+      "timestamp": 1765541556.9793732
+    }
+  ],
+  "timestamp": "2025-12-12T15:12:36.979442"
+}
