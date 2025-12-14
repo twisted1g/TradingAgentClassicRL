@@ -32,7 +32,7 @@ class MyTradingEnv(Env):
 
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.MultiDiscrete([3, 3, 3, 3, 2, 3])
-        
+
         self._reset_state()
 
     def _reset_state(self):
@@ -146,13 +146,52 @@ class MyTradingEnv(Env):
     def _calculate_reward(self) -> float:
         portfolio_change = self.portfolio_value - self.prev_portfolio_value
         portfolio_change_pct = portfolio_change / (self.prev_portfolio_value + 1e-8)
-        reward = portfolio_change_pct * 100.0
-        
-        return float(reward)
+
+        base_reward = portfolio_change_pct * 100.0
+        trade_reward = 0.0
+
+        if self.last_exit_reason is not None:
+            if self.last_exit_reason == "agent":
+                if portfolio_change_pct > 0:
+                    trade_reward += portfolio_change_pct * 30.0
+                else:
+                    trade_reward += portfolio_change_pct * 40.0
+
+            elif self.last_exit_reason == "drawdown":
+                trade_reward -= 2.0
+
+            elif self.last_exit_reason == "time":
+                trade_reward -= 0.2
+
+        if self.position == 1:
+            holding_penalty = self.current_holding_time * 0.005
+            trade_reward -= min(holding_penalty, 1.0)
+
+            if self.max_drawdown > 0.02:
+                drawdown_penalty = self.max_drawdown * 5.0
+                trade_reward -= min(drawdown_penalty, 3.0)
+
+        if self.position == 0 and abs(portfolio_change_pct) < 0.001:
+            trade_reward -= 0.005  # Было 0.01
+
+        if hasattr(self, "trade_history") and self.trade_history:
+            recent_trades = self.trade_history[-3:]
+            winning_trades = sum(
+                1 for trade in recent_trades if trade.get("pnl", 0) > 0
+            )
+
+            if winning_trades >= 2:
+                trade_reward += 2.0  # Было 1.0
+
+        total_reward = base_reward + trade_reward
+
+        total_reward = np.clip(total_reward, -5.0, 5.0)  # Было -10, 10
+
+        return float(total_reward)
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
         assert self.action_space.contains(action)
-        
+
         self.prev_portfolio_value = self.portfolio_value
         current_price = float(self.df.iloc[self.current_step]["close"])
         self.last_exit_reason = None
@@ -162,7 +201,7 @@ class MyTradingEnv(Env):
             invest_amount = self.portfolio_value
             commission_fee = invest_amount * self.commission
             units = (invest_amount - commission_fee) / price_with_slip
-            
+
             self.units = float(units)
             self.entry_price = price_with_slip
             self.position = 1
@@ -190,7 +229,7 @@ class MyTradingEnv(Env):
                 or self.current_holding_time >= self.max_holding_time
                 or current_drawdown >= self.max_drawdown_threshold
             )
-            
+
             if should_close:
                 if action == 2:
                     self.last_exit_reason = "agent"
@@ -208,15 +247,17 @@ class MyTradingEnv(Env):
                 self.position_value = 0.0
                 self.portfolio_value = self.cash
 
-                self.trade_history.append({
-                    "entry_price": self.entry_price,
-                    "exit_price": exit_price,
-                    "pnl": float(pnl),
-                    "units": float(self.units),
-                    "holding_time": int(self.current_holding_time),
-                    "max_drawdown": float(self.max_drawdown),
-                    "exit_reason": self.last_exit_reason,
-                })
+                self.trade_history.append(
+                    {
+                        "entry_price": self.entry_price,
+                        "exit_price": exit_price,
+                        "pnl": float(pnl),
+                        "units": float(self.units),
+                        "holding_time": int(self.current_holding_time),
+                        "max_drawdown": float(self.max_drawdown),
+                        "exit_reason": self.last_exit_reason,
+                    }
+                )
 
                 self.units = 0.0
                 self.entry_price = 0.0
@@ -229,9 +270,9 @@ class MyTradingEnv(Env):
 
         terminated = self.current_step >= len(self.df) - 1
         truncated = self.max_steps is not None and self._steps_elapsed >= self.max_steps
-        
+
         reward = self._calculate_reward()
-        
+
         obs = self._get_observation()
 
         info = {
@@ -250,14 +291,14 @@ class MyTradingEnv(Env):
     ) -> Tuple[np.ndarray, Dict]:
         if seed is not None:
             np.random.seed(seed)
-        
+
         if self.max_steps is None:
             start_max = len(self.df) - 1
         else:
             start_max = len(self.df) - self.max_steps
 
         self.current_step = np.random.randint(self.window_size, start_max)
-        
+
         self.position = 0
         self.units = 0.0
         self.entry_price = 0.0
@@ -268,12 +309,12 @@ class MyTradingEnv(Env):
         self.max_drawdown = 0.0
         self.trade_history = []
         self._steps_elapsed = 0
-        
-        if not hasattr(self, 'prev_portfolio_value'):
+
+        if not hasattr(self, "prev_portfolio_value"):
             self.prev_portfolio_value = float(self.initial_balance)
         else:
             self.prev_portfolio_value = float(self.initial_balance)
-        
+
         self.last_exit_reason = None
 
         obs = self._get_observation()
@@ -303,14 +344,14 @@ class MyTradingEnv(Env):
             }
 
         trades = pd.DataFrame(self.trade_history)
-        
+
         total_profit = trades[trades["pnl"] > 0]["pnl"].sum()
         total_loss = abs(trades[trades["pnl"] < 0]["pnl"].sum())
         profit_factor = total_profit / (total_loss + 1e-8)
-        
+
         returns = trades["pnl"] / self.initial_balance
         sharpe = np.mean(returns) / (np.std(returns) + 1e-8) * np.sqrt(252)
-        
+
         return {
             "total_trades": len(trades),
             "win_rate": float((trades["pnl"] > 0).mean() * 100.0),
@@ -320,7 +361,9 @@ class MyTradingEnv(Env):
             "total_pnl": float(trades["pnl"].sum()),
             "profit_factor": float(profit_factor),
             "sharpe_ratio": float(sharpe),
-            "trades_closed_by_drawdown": int((trades["exit_reason"] == "drawdown").sum()),
+            "trades_closed_by_drawdown": int(
+                (trades["exit_reason"] == "drawdown").sum()
+            ),
             "trades_closed_by_time": int((trades["exit_reason"] == "time").sum()),
             "trades_closed_by_agent": int((trades["exit_reason"] == "agent").sum()),
         }
