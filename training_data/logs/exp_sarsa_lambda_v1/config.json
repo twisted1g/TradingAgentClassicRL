@@ -1,0 +1,23 @@
+{
+  "agent_name": "SARSA_Lambda_v1",
+  "agent_type": "SARSA_Lambda",
+  "n_episodes": 8000,
+  "n_episodes_start": 0,
+  "max_steps": 1000,
+  "learning_rate": 0.1,
+  "discount_factor": 0.95,
+  "epsilon_start": 1.0,
+  "epsilon_end": 0.01,
+  "epsilon_decay": 0.9998,
+  "initial_balance": 1000.0,
+  "window_size": 10,
+  "commission": 0.0001,
+  "slippage": 0.0001,
+  "max_holding_time": 72,
+  "max_drawdown_threshold": 0.08,
+  "eval_frequency": 100,
+  "save_frequency": 1000,
+  "patience": 500,
+  "seed": 42,
+  "extra_params": {}
+}

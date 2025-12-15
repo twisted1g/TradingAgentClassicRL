@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 from .dataclasses import TrainingConfig, EpisodeMetrics
 
+
 class TrainingLogger:
     def __init__(self, log_dir: Path, experiment_name: str):
         self.log_dir = Path(log_dir) / experiment_name
@@ -38,12 +39,11 @@ class TrainingLogger:
     def log_checkpoint(self, episode: int, path: str):
         self.checkpoint_info.append({"episode": episode, "path": path, "timestamp": time.time()})
 
-    def save_summary(self, config: TrainingConfig, training_time: float, best_val_reward: float):
+    def save_summary(self, config: TrainingConfig, training_time: float):
         summary = {
             "config": config.to_dict(),
             "training_time": training_time,
             "training_time_minutes": training_time / 60,
-            "best_val_reward": best_val_reward,
             "total_episodes": len(self.episode_metrics),
             "final_metrics": self.episode_metrics[-1].to_dict() if self.episode_metrics else {},
             "checkpoints": self.checkpoint_info,
@@ -64,7 +64,6 @@ class TrainingLogger:
 Время обучения: {training_time/60:.2f} минут
 Всего эпизодов: {len(self.episode_metrics)}
 Всего оценок: {len(self.eval_results)}
-Лучшая eval награда: {best_val_reward:.2f}
 {'='*80}
 """
         with open(self.log_dir / "summary.txt", "w") as f:
