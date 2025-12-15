@@ -125,16 +125,19 @@ class MyTradingEnv(Env):
 
     def _get_observation(self) -> np.ndarray:
         row = self.df.iloc[self.current_step]
+
         rsi_level = int(row["rsi_discrete"])
         macd_signal = int(row["macd_discrete"])
         ma_trend = int(row["ma_trend_discrete"])
         # price_trend = int(row["price_trend_discrete"])
         position_flag = int(self.position)
 
+        current_price = float(row["close"])
+
         if self.position == 0:
             pnl_state = 0
         else:
-            pnl_pct = (self.current_price - self.entry_price) / self.entry_price
+            pnl_pct = (current_price - self.entry_price) / self.entry_price
 
             threshold = max(self.commission * 4, 0.005)
 
@@ -156,32 +159,37 @@ class MyTradingEnv(Env):
             dtype=np.int64,
         )
 
-    def _calculate_reward(self) -> float:
-        reward = 0.0
-        reward -= 0.001
-
-        if self.position == 1:
-            reward -= 0.002 * (self.current_holding_time / self.max_holding_time)
-
+    def _calculate_reward(self, done: bool) -> float:
+        reward = -0.001
         if self.last_exit_reason is not None and self.trade_history:
             last_trade = self.trade_history[-1]
+            pnl_pct = last_trade["pnl"] / (
+                last_trade["entry_price"] * last_trade["units"]
+            )
+            trade_reward = pnl_pct * 100.0
 
-            pnl_pct = last_trade["pnl"] / self.initial_balance
-
-            reward += pnl_pct * 100.0
+            if trade_reward < 0:
+                trade_reward *= 1.3
 
             if self.last_exit_reason == "drawdown":
-                reward -= 2.0
+                trade_reward -= 2.0
             elif self.last_exit_reason == "time":
-                reward -= 0.5
+                trade_reward -= 0.5
 
-        if self.max_drawdown >= self.max_drawdown_threshold:
-            reward -= 3.0
+            reward += trade_reward
 
-        if reward < 0:
-            reward *= 1.3
+        if done:
+            final_return = (
+                self.portfolio_value - self.initial_balance
+            ) / self.initial_balance
+            terminal_reward = final_return * 100.0
 
-        return float(np.clip(reward, -5.0, 5.0))
+            if terminal_reward < 0:
+                terminal_reward *= 1.5
+
+            reward += terminal_reward
+
+        return float(np.clip(reward, -10.0, 10.0))
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
         assert self.action_space.contains(action)
@@ -265,7 +273,8 @@ class MyTradingEnv(Env):
         terminated = self.current_step >= len(self.df) - 1
         truncated = self.max_steps is not None and self._steps_elapsed >= self.max_steps
 
-        reward = self._calculate_reward()
+        done = terminated or truncated
+        reward = self._calculate_reward(done)
 
         obs = self._get_observation()
 
