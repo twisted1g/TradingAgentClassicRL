@@ -128,66 +128,60 @@ class MyTradingEnv(Env):
         rsi_level = int(row["rsi_discrete"])
         macd_signal = int(row["macd_discrete"])
         ma_trend = int(row["ma_trend_discrete"])
-        price_trend = int(row["price_trend_discrete"])
+        # price_trend = int(row["price_trend_discrete"])
         position_flag = int(self.position)
 
-        if self.current_holding_time == 0:
-            hold_level = 0
-        elif self.current_holding_time < self.max_holding_time // 2:
-            hold_level = 1
+        if self.position == 0:
+            pnl_state = 0
         else:
-            hold_level = 2
+            pnl_pct = (self.current_price - self.entry_price) / self.entry_price
+
+            threshold = max(self.commission * 4, 0.005)
+
+            if pnl_pct <= -threshold:
+                pnl_state = 1  # в минусе
+            elif pnl_pct >= threshold:
+                pnl_state = 2  # в плюсе
+            else:
+                pnl_state = 0  # около нуля
 
         return np.array(
-            [rsi_level, macd_signal, ma_trend, price_trend, position_flag, hold_level],
+            [
+                rsi_level,
+                macd_signal,
+                ma_trend,
+                position_flag,
+                pnl_state,
+            ],
             dtype=np.int64,
         )
 
     def _calculate_reward(self) -> float:
-        portfolio_change = self.portfolio_value - self.prev_portfolio_value
-        portfolio_change_pct = portfolio_change / (self.prev_portfolio_value + 1e-8)
-
-        base_reward = portfolio_change_pct * 100.0
-        trade_reward = 0.0
-
-        if self.last_exit_reason is not None:
-            if self.last_exit_reason == "agent":
-                if portfolio_change_pct > 0:
-                    trade_reward += portfolio_change_pct * 30.0
-                else:
-                    trade_reward += portfolio_change_pct * 40.0
-
-            elif self.last_exit_reason == "drawdown":
-                trade_reward -= 2.0
-
-            elif self.last_exit_reason == "time":
-                trade_reward -= 0.2
+        reward = 0.0
+        reward -= 0.001
 
         if self.position == 1:
-            holding_penalty = self.current_holding_time * 0.005
-            trade_reward -= min(holding_penalty, 1.0)
+            reward -= 0.002 * (self.current_holding_time / self.max_holding_time)
 
-            if self.max_drawdown > 0.02:
-                drawdown_penalty = self.max_drawdown * 5.0
-                trade_reward -= min(drawdown_penalty, 3.0)
+        if self.last_exit_reason is not None and self.trade_history:
+            last_trade = self.trade_history[-1]
 
-        if self.position == 0 and abs(portfolio_change_pct) < 0.001:
-            trade_reward -= 0.005  # Было 0.01
+            pnl_pct = last_trade["pnl"] / self.initial_balance
 
-        if hasattr(self, "trade_history") and self.trade_history:
-            recent_trades = self.trade_history[-3:]
-            winning_trades = sum(
-                1 for trade in recent_trades if trade.get("pnl", 0) > 0
-            )
+            reward += pnl_pct * 100.0
 
-            if winning_trades >= 2:
-                trade_reward += 2.0  # Было 1.0
+            if self.last_exit_reason == "drawdown":
+                reward -= 2.0
+            elif self.last_exit_reason == "time":
+                reward -= 0.5
 
-        total_reward = base_reward + trade_reward
+        if self.max_drawdown >= self.max_drawdown_threshold:
+            reward -= 3.0
 
-        total_reward = np.clip(total_reward, -5.0, 5.0)  # Было -10, 10
+        if reward < 0:
+            reward *= 1.3
 
-        return float(total_reward)
+        return float(np.clip(reward, -5.0, 5.0))
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
         assert self.action_space.contains(action)
