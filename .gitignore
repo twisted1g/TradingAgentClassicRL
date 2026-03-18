@@ -1,9 +1,54 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
 *.pyd
+*.so
 
-.ipynb_checkpoints
+# Virtual environments
+.venv/
+venv/
+env/
 
-data/data_1m.csv
-data/binance-BTCUSDT-1m.pkl
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# Type check / lint / format
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data artifacts
+data/*.csv
+data/*.pkl
+data/*.parquet
+data/*.feather
+
+# Training outputs
+training_data/logs/
+training_data/checkpoints/
