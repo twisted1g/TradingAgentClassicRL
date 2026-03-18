@@ -160,31 +160,42 @@
 
 ### Графики динамики портфеля
 
-<!-- Вставьте графики из coursework/figures/ -->
 
 **Рисунок 1.** Динамика средней награды по эпизодам — первичное обучение  
-`[график_1_средняя_награда_обучение.png]`
+<img width="1790" height="1181" alt="image" src="https://github.com/user-attachments/assets/fc412401-419b-422a-b932-5b1dd823fae9" />
+
 
 **Рисунок 2.** Динамика средней награды по эпизодам — дообучение  
-`[график_2_средняя_награда_дообучение.png]`
+<img width="692" height="438" alt="image" src="https://github.com/user-attachments/assets/807cd5e0-c0d5-4133-a251-fb4f58f3c565" />
+
 
 **Рисунок 3.** Изменение Win Rate по эпизодам — первичное обучение  
-`[график_3_winrate_обучение.png]`
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/a2a139d1-47dc-41bb-866b-e92def5f83f1" />
+
 
 **Рисунок 4.** Изменение количества сделок по эпизодам — первичное обучение  
-`[график_4_сделки_обучение.png]`
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/f7c2d053-c037-424b-8621-60dbcf7ed749" />
+
 
 **Рисунок 5.** Изменение Win Rate по эпизодам — дообучение  
-`[график_5_winrate_дообучение.png]`
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/e2d5adc0-2fc2-4feb-8d55-8300be6ddbda" />
+
 
 **Рисунок 6.** Изменение количества сделок по эпизодам — дообучение  
-`[график_6_сделки_дообучение.png]`
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/0282ade6-f76a-4cf1-b21e-317d82da4b41" />
+
 
 **Рисунок 7–8.** Стоимость портфеля всех агентов — обучающая выборка  
-`[график_7_портфель_train.png]` / `[график_8_портфель_train_ft.png]`
+<img width="1389" height="690" alt="image" src="https://github.com/user-attachments/assets/500d19cc-3c31-47b0-8816-98f973f7ec43" />
+ 
+<img width="1389" height="690" alt="image" src="https://github.com/user-attachments/assets/cef42e8e-a19f-4f8b-8c64-4b797d4f3957" />
+
 
 **Рисунок 9–10.** Стоимость портфеля всех агентов — тестовая выборка  
-`[график_9_портфель_test.png]` / `[график_10_портфель_test_ft.png]`
+<img width="1389" height="690" alt="image" src="https://github.com/user-attachments/assets/1d9938fd-8850-4cd8-9b5e-fb1d081a060f" />
+
+<img width="1389" height="690" alt="image" src="https://github.com/user-attachments/assets/522626d7-908d-4bcb-97ea-cb89a3d55015" />
+
 
 ---
 
